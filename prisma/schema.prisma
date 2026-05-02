@@ -1,0 +1,357 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model users {
+  id                                           Int                 @id @default(autoincrement())
+  name                                         String              @db.VarChar(45)
+  mobile                                       String              @unique @db.VarChar(30)
+  bio                                          String?             @db.VarChar(205)
+  profile_pic                                  String?             @default("https://static.vecteezy.com/system/resources/previews/024/983/914/large_2x/simple-user-default-icon-free-png.png") @db.VarChar(300)
+  email                                        String              @unique @db.VarChar(45)
+  is_deleted                                   Boolean?            @default(false)
+  is_verified                                  Boolean?            @default(false)
+  block_block_user_idTousers                   block[]             @relation("block_user_idTousers")
+  block_block_blocked_user_idTousers           block[]             @relation("block_blocked_user_idTousers")
+  chat_member                                  chat_member[]
+  devices                                      devices[]
+  groups                                       groups[]
+  message                                      message[]
+  message_reaction                             message_reaction[]
+  notification_notification_receiver_idTousers notification[]      @relation("notification_receiver_idTousers")
+  notification_notification_sender_idTousers   notification[]      @relation("notification_sender_idTousers")
+  notification_seen                            notification_seen[]
+  privacy_settings                             privacy_settings[]
+  privacy_user                                 privacy_user[]
+  seen_message                                 seen_message[]
+  story                                        story[]
+  story_likes                                  story_likes[]
+  story_seen                                   story_seen[]
+  user_presence                                user_presence?
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model attachment {
+  attachment_id Int            @id @default(autoincrement())
+  message_id    Int
+  url           String         @db.VarChar(500)
+  file_type     file_type_enum
+  file_name     String         @db.VarChar(250)
+  file_size     BigInt
+  created_at    DateTime       @default(now()) @db.Timestamp(6)
+  updated_at    DateTime       @default(now()) @db.Timestamp(6)
+  message       message        @relation(fields: [message_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model block {
+  block_id                           Int      @id @default(autoincrement())
+  blocked_user_id                    Int
+  user_id                            Int
+  reason                             String?  @db.VarChar(300)
+  blocked_at                         DateTime @default(now()) @db.Timestamp(6)
+  users_block_user_idTousers         users    @relation("block_user_idTousers", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "block_ibfk_1")
+  users_block_blocked_user_idTousers users    @relation("block_blocked_user_idTousers", fields: [blocked_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "block_ibfk_2")
+
+  @@unique([user_id, blocked_user_id])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model chat {
+  id          Int            @id @default(autoincrement())
+  chat_type   chat_type_enum
+  created_at  DateTime       @default(now()) @db.Timestamp(6)
+  updated_at  DateTime       @default(now()) @db.Timestamp(6)
+  is_deleted  Boolean?       @default(false)
+  deleted_at  DateTime?      @db.Timestamp(6)
+  chat_member chat_member[]
+  groups      groups[]
+  message     message[]
+
+  @@index([created_at], map: "idx_chat_created_at")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model chat_member {
+  id        Int       @id @default(autoincrement())
+  member_id Int
+  joined_at DateTime  @default(now()) @db.Timestamp(6)
+  role      Int?
+  left_at   DateTime? @db.Timestamp(6)
+  chat_id   Int
+  chat      chat      @relation(fields: [chat_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_chat_member_chat")
+  users     users     @relation(fields: [member_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_chat_member_user")
+
+  @@unique([member_id, chat_id], map: "uq_member_chat")
+  @@index([chat_id], map: "idx_chat_member_chat_id")
+  @@index([joined_at], map: "idx_joined_at")
+  @@index([left_at], map: "idx_left_at")
+  @@index([member_id], map: "idx_member_id")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model devices {
+  login_id    Int      @id @default(autoincrement())
+  device_id   String   @db.VarChar(100)
+  device_name String   @db.VarChar(100)
+  user_id     Int
+  created_at  DateTime @default(now()) @db.Timestamp(6)
+  ip_address  String?  @db.VarChar(45)
+  location    String   @db.VarChar(200)
+  users       users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model edit_message {
+  edit_message_id Int      @id @default(autoincrement())
+  message_id      Int
+  content         String
+  old_content     String
+  created_at      DateTime @default(now()) @db.Timestamp(6)
+  message         message  @relation(fields: [message_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model groups {
+  group_id      Int       @id @default(autoincrement())
+  chat_id       Int
+  created_by_id Int?
+  name          String    @db.VarChar(100)
+  profile_pic   String?   @db.VarChar(200)
+  created_at    DateTime  @default(now()) @db.Timestamp(6)
+  updated_at    DateTime  @default(now()) @db.Timestamp(6)
+  deleted_at    DateTime? @db.Timestamp(6)
+  is_deleted    Boolean?  @default(false)
+  chat          chat      @relation(fields: [chat_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "group_ibfk_1")
+  users         users?    @relation(fields: [created_by_id], references: [id], onUpdate: NoAction, map: "group_ibfk_2")
+
+  @@index([created_at], map: "idx_group_created_at")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model message {
+  id                                                       Int                @id @default(autoincrement())
+  chat_id                                                  Int
+  sender_id                                                Int
+  content                                                  String?
+  story_id                                                 Int?
+  created_at                                               DateTime           @default(now()) @db.Timestamp(6)
+  is_edited                                                Boolean?           @default(false)
+  reply_to_message_id                                      Int?
+  forwarded_from_message_id                                Int?
+  is_forwarded                                             Boolean?           @default(false)
+  is_deleted                                               Boolean?           @default(false)
+  attachment                                               attachment[]
+  edit_message                                             edit_message[]
+  chat                                                     chat               @relation(fields: [chat_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_chat_id")
+  message_message_forwarded_from_message_idTomessage       message?           @relation("message_forwarded_from_message_idTomessage", fields: [forwarded_from_message_id], references: [id], onUpdate: NoAction, map: "fk_forwarded_from_message_id")
+  other_message_message_forwarded_from_message_idTomessage message[]          @relation("message_forwarded_from_message_idTomessage")
+  message_message_reply_to_message_idTomessage             message?           @relation("message_reply_to_message_idTomessage", fields: [reply_to_message_id], references: [id], onUpdate: NoAction, map: "fk_reply_to_message_id")
+  other_message_message_reply_to_message_idTomessage       message[]          @relation("message_reply_to_message_idTomessage")
+  users                                                    users              @relation(fields: [sender_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_sender_id")
+  story                                                    story?             @relation(fields: [story_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_story_id")
+  message_reaction                                         message_reaction[]
+  seen_message                                             seen_message[]
+
+  @@index([chat_id], map: "idx_message_chat_id")
+  @@index([created_at], map: "idx_message_created_at")
+  @@index([sender_id], map: "idx_message_sender_id")
+  @@index([sender_id], map: "idx_message_story_id")
+  @@index([sender_id], map: "idx_sender_id")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model message_reaction {
+  message_reaction_id Int      @id @default(autoincrement())
+  message_id          Int
+  reaction_id         Int
+  user_id             Int
+  created_at          DateTime @default(now()) @db.Timestamp(6)
+  updated_at          DateTime @default(now()) @db.Timestamp(6)
+  message             message  @relation(fields: [message_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  reaction            reaction @relation(fields: [reaction_id], references: [react_id], onDelete: NoAction, onUpdate: NoAction)
+  users               users    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([message_id, user_id])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model notification {
+  notification_id                       Int                    @id @default(autoincrement())
+  receiver_id                           Int
+  sender_id                             Int?
+  notification_type                     notification_type_enum
+  reference_id                          Int?
+  metadata                              Json?
+  is_seen                               Boolean?               @default(false)
+  created_at                            DateTime?              @default(now()) @db.Timestamp(6)
+  users_notification_receiver_idTousers users                  @relation("notification_receiver_idTousers", fields: [receiver_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users_notification_sender_idTousers   users?                 @relation("notification_sender_idTousers", fields: [sender_id], references: [id], onUpdate: NoAction)
+  notification_seen                     notification_seen[]
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model notification_seen {
+  seen_id         Int          @id @default(autoincrement())
+  user_id         Int
+  notification_id Int
+  seen_at         DateTime     @default(now()) @db.Timestamp(6)
+  notification    notification @relation(fields: [notification_id], references: [notification_id], onDelete: Cascade, onUpdate: NoAction)
+  users           users        @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model otp {
+  otp_id     Int      @id @default(autoincrement())
+  email_id   String   @db.VarChar(100)
+  otp        String?  @db.Char(6)
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  expires_at DateTime @db.Timestamp(6)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model privacy_settings {
+  privacy_id   Int               @id @default(autoincrement())
+  user_id      Int
+  entity_type  entity_type_enum
+  privacy_type privacy_type_enum
+  created_at   DateTime?         @default(now()) @db.Timestamp(6)
+  users        users             @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  privacy_user privacy_user[]
+
+  @@unique([user_id, entity_type])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model privacy_user {
+  p_user_id        Int              @id @default(autoincrement())
+  target_user_id   Int
+  privacy_id       Int
+  created_at       DateTime?        @default(now()) @db.Timestamp(6)
+  privacy_settings privacy_settings @relation(fields: [privacy_id], references: [privacy_id], onDelete: Cascade, onUpdate: NoAction)
+  users            users            @relation(fields: [target_user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([privacy_id, target_user_id])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model reaction {
+  react_id         Int                @id @default(autoincrement())
+  emoji            String?            @db.VarChar(10)
+  created_at       DateTime           @default(now()) @db.Timestamp(6)
+  message_reaction message_reaction[]
+  story_likes      story_likes[]
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model register {
+  id          Int      @id @default(autoincrement())
+  email       String   @unique @db.VarChar(100)
+  otp         String   @db.Char(6)
+  created_at  DateTime @default(now()) @db.Timestamp(6)
+  expires_at  DateTime @db.Timestamp(6)
+  is_verified Boolean? @default(false)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model seen_message {
+  seen_id    Int       @id @default(autoincrement())
+  message_id Int
+  user_id    Int
+  seen_at    DateTime? @default(now()) @db.Timestamp(6)
+  message    message   @relation(fields: [message_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users      users     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([message_id, user_id])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model story {
+  id          Int           @id @default(autoincrement())
+  user_id     Int
+  content     String        @db.VarChar(200)
+  created_at  DateTime      @default(now()) @db.Timestamp(6)
+  expires_at  DateTime      @db.Timestamp(6)
+  is_deleted  Boolean?      @default(false)
+  message     message[]
+  users       users         @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_story_user")
+  story_likes story_likes[]
+  story_seen  story_seen[]
+
+  @@index([created_at], map: "idx_story_created_at")
+  @@index([user_id], map: "idx_story_user_id")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model story_likes {
+  like_id     Int      @id @default(autoincrement())
+  story_id    Int
+  user_id     Int
+  reaction_id Int
+  created_at  DateTime @default(now()) @db.Timestamp(6)
+  reaction    reaction @relation(fields: [reaction_id], references: [react_id], onDelete: Cascade, onUpdate: NoAction)
+  story       story    @relation(fields: [story_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users       users    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([story_id, user_id])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model story_seen {
+  seen_id  Int      @id @default(autoincrement())
+  user_id  Int
+  story_id Int
+  seen_at  DateTime @default(now()) @db.Timestamp(6)
+  story    story    @relation(fields: [story_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users    users    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([user_id, story_id])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model user_presence {
+  user_id    Int       @id
+  is_online  Boolean?  @default(false)
+  last_seen  DateTime? @db.Timestamp(6)
+  updated_at DateTime? @default(now()) @db.Timestamp(6)
+  users      users     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+enum chat_type_enum {
+  private
+  group
+}
+
+enum entity_type_enum {
+  profile_photo
+  status
+  story
+  online
+  last_seen
+}
+
+enum file_type_enum {
+  image
+  video
+  audio
+  file
+}
+
+enum notification_type_enum {
+  new_message
+  story_like
+  message_reaction
+  message_reply
+}
+
+enum privacy_type_enum {
+  everyone
+  contacts
+  only_share_with
+  contacts_except
+}
