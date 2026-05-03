@@ -9,13 +9,14 @@ datasource db {
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model users {
   id                                           Int                 @id @default(autoincrement())
-  name                                         String              @db.VarChar(45)
+  name                                         String
   mobile                                       String              @unique @db.VarChar(30)
   bio                                          String?             @db.VarChar(205)
   profile_pic                                  String?             @default("https://static.vecteezy.com/system/resources/previews/024/983/914/large_2x/simple-user-default-icon-free-png.png") @db.VarChar(300)
   email                                        String              @unique @db.VarChar(45)
   is_deleted                                   Boolean?            @default(false)
   is_verified                                  Boolean?            @default(false)
+  user_name                                    String              @unique @db.VarChar(50)
   block_block_user_idTousers                   block[]             @relation("block_user_idTousers")
   block_block_blocked_user_idTousers           block[]             @relation("block_blocked_user_idTousers")
   chat_member                                  chat_member[]

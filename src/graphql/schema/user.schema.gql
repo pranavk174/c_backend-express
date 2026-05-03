@@ -1,0 +1,50 @@
+interface Email {
+  email: String!
+}
+
+type Otp implements Email {
+  email: String!
+  otp: String!
+}
+
+type User implements Email {
+  name: String!
+  id: Int!
+  user_name: String!
+  email: String!
+  about: String
+  mobile: String!
+  profile_pic: String
+}
+
+input UserInput {
+  fname: String!
+  lname: String!
+  user_name: String!
+  email: String!
+  about: String
+  mobile: String!
+  profile_pic: String
+}
+
+type data {
+  email: String!
+  id: Int!
+}
+union ResponseData = User | data
+type apiResponse {
+  message: String!
+  status: Int!
+  success: Boolean
+  data: ResponseData
+}
+
+type Query {
+  getUser: apiResponse!
+}
+
+type Mutation {
+  sendOtpMail(email: String!): apiResponse!
+  verifyOtp(email: String!, otp: String!): apiResponse!
+  createUser(input: UserInput): apiResponse!
+}
