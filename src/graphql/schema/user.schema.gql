@@ -12,7 +12,7 @@ type User implements Email {
   id: Int!
   user_name: String!
   email: String!
-  about: String
+  bio: String
   mobile: String!
   profile_pic: String
 }
@@ -22,8 +22,14 @@ input UserInput {
   lname: String!
   user_name: String!
   email: String!
-  about: String
+  bio: String
   mobile: String!
+  profile_pic: String
+}
+
+input UpdateUserInput {
+  name: String
+  bio: String
   profile_pic: String
 }
 
@@ -32,19 +38,48 @@ type data {
   id: Int!
 }
 union ResponseData = User | data
-type apiResponse {
+type userApiResponse implements apiResponse {
   message: String!
   status: Int!
   success: Boolean
   data: ResponseData
+  error: String
+}
+
+input verifyOtpInput {
+  email: String!
+  otp: String!
+  device_id: String!
+  ip_address: String!
+  location: String!
+  device_name: String!
+}
+
+enum AccountStatus {
+  delete
+  DELETE
+  suspend
+  SUSPEND
+}
+
+input blockUserInput {
+  blocked_user_id: Int!
+  reason: String
 }
 
 type Query {
-  getUser: apiResponse!
+  getUser: userApiResponse!
 }
 
 type Mutation {
-  sendOtpMail(email: String!): apiResponse!
-  verifyOtp(email: String!, otp: String!): apiResponse!
-  createUser(input: UserInput): apiResponse!
+  sendOtpMail(email: String!): userApiResponse!
+  verifyOtp(input: verifyOtpInput): userApiResponse!
+  createUser(input: UserInput): userApiResponse!
+  updateUser(input: UpdateUserInput): userApiResponse!
+  generateRefreshToken: userApiResponse!
+  logout: userApiResponse!
+  deleteUser(action_type: AccountStatus!): userApiResponse!
+  blockUser(input: blockUserInput!): userApiResponse!
+  unBlockUser(input: blockUserInput!): userApiResponse!
+  # loginUser(email:String!):userApiResponse!
 }

@@ -1,0 +1,18 @@
+type Query {
+  _empty: String
+}
+
+type Mutation {
+  _empty: String
+}
+
+type Subscription {
+  _empty: String
+}
+
+interface apiResponse {
+  message: String!
+  status: Int!
+  success: Boolean
+  error: String
+}

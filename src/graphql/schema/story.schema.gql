@@ -1,0 +1,52 @@
+input createStoryInput {
+  text_data: String!
+  content: String!
+}
+
+type Story {
+  id: ID!
+  text_data: String!
+  content: String!
+  created_at: String!
+  updated_at: String!
+  expires_at: String!
+}
+
+type StoryData {
+  id: ID!
+  text_data: String!
+  content: String!
+}
+
+input storyLikeInput {
+  id: ID!
+  like: Boolean!
+  reaction_id: Int
+}
+
+type StoriesData {
+  stories: [StoryData!]!
+}
+
+union storyResponseData = StoryData | StoriesData
+
+type storyApiResponse implements apiResponse {
+  message: String!
+  status: Int!
+  success: Boolean
+  data: storyResponseData
+  error: String
+}
+
+extend type Query {
+  getStoryById(id: ID!): storyApiResponse!
+  getAllStories: storyApiResponse!
+}
+
+extend type Mutation {
+  createStory(input: createStoryInput!): storyApiResponse!
+  deleteStory(id: ID!): storyApiResponse!
+  replyToStory(id: ID!, content: String!): storyApiResponse!
+  seenStory(id: ID!): storyApiResponse!
+  likeStory(input: storyLikeInput!): storyApiResponse!
+}

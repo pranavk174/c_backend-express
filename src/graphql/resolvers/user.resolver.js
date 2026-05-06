@@ -1,8 +1,10 @@
 import prisma from "../../../prisma/prisma-client.js";
 import { sendMail } from "../../utils/nodemainler.js";
 import bcrypt from "bcrypt";
+import { validateToken } from "../../lib/tokenvalidator.js";
 
-export const resolvers = {
+import jwt from "jsonwebtoken";
+const userResolvers = {
   ResponseData: {
     __resolveType(obj) {
       if (obj.fname || obj.user_name || obj.mobile) return "User";
@@ -10,35 +12,34 @@ export const resolvers = {
     },
   },
   Query: {
-    getUser: async(_, __, context) => {
+    getUser: async (_, __, context) => {
       try {
-        // if (!context.user) {
-        //   throw new Error("Unauthorized User");
-        // }
+        console.log(context, "context dataaaa");
+        const payload = await validateToken(context);
 
         const data = await prisma.users.findFirst({
-          where :{
-            email: "cpranav972@gmail.com"
-          }
-        })
+          where: {
+            email: payload.email,
+          },
+        });
 
-        if(!data){
-          throw new Error()
+        if (!data) {
+          throw new Error();
         }
-
 
         return {
           message: "success fully retuireived",
           status: 200,
           data,
-          success:true
+          success: true,
         };
       } catch (error) {
         return {
           message: "Something went wrong",
           status: 500,
-          success:false
-        }
+          success: false,
+          error: error.message,
+        };
       }
     },
   },
@@ -53,161 +54,264 @@ export const resolvers = {
       }
 
       try {
-        const schemaResult = await prisma.$queryRawUnsafe(
-          "SELECT current_schema()",
-        );
-        console.log(schemaResult, "result..");
         const exists = await prisma.users.findFirst({
-          where: {
-            email: email,
-          },
+          where: { email },
         });
-        if (exists) {
-          return {
-            message: "User Already Exists",
-            status: 403,
-          };
-        }
 
-        console.log(email, "wmIL...");
-        const sent = await sendMail(email, otp);
-
-        if (!sent) {
-          throw new Error();
-        }
-
-        const SALT_ROUNDS = 10;
-
-        const expires_at = new Date(Date.now() + 5 * 60 * 1000); // 5 min
         const otp = Math.floor(100000 + Math.random() * 900000);
+        const expires_at = new Date(Date.now() + 5 * 60 * 1000);
+        console.log(otp, "OTP");
 
-        // generated OTP
+        if (exists) {
+          if (
+            exists.account_status === "deleted" ||
+            exists.account_status === "suspended"
+          ) {
+            return {
+              message: `Account is ${exists.account_status}, contact support`,
+              status: 403,
+              success: false,
+            };
+          }
 
-        const hashedOtp = await bcrypt.hash(otp, SALT_ROUNDS);
+          const sent = await sendMail(email, otp);
+          if (!sent) throw new Error();
 
-        const found = await prisma.register.findFirst({
-          where: {
-            email: email,
-          },
-        });
-
-        if (found) {
-          const updated = await prisma.register.update({
-            where: {
-              email,
+          await prisma.otp.upsert({
+            where: { email },
+            update: {
+              otp: await bcrypt.hash(String(otp), 10),
+              expires_at,
             },
-            data: {
-              otp: String(hashedOtp),
+            create: {
+              email,
+              otp: await bcrypt.hash(String(otp), 10),
               expires_at,
             },
           });
 
-          if (!updated) {
-            throw new Error();
-          }
           return {
             message: "Otp Send Successfully",
-            status: 201,
-          };
-        }
-
-        const created = await prisma.register.create({
-          data: {
-            email,
-            otp: String(otp),
-            expires_at,
-          },
-        });
-        if (!created) {
-          throw new Error();
-        }
-
-        return {
-          message: "Otp Send Successfully",
-          status: 201,
-        };
-
-        // const update =
-      } catch (error) {
-        console.log(error, "errrorrr");
-        return {
-          message: "Something Went wrong",
-          status: 500,
-          error,
-        };
-      }
-    },
-    verifyOtp: async (_, { email, otp }) => {
-      try {
-        const isMatched = await prisma.register.findFirst({
-          where: {
-            email: email,
-          },
-        });
-
-        if (!isMatched) {
-          return {
-            message: "This Email in Invalid",
-            status: 400,
-            success: false,
-          };
-        }
-
-        const isMatch = await bcrypt.compare(otp, isMatched.otp);
-
-        if (!isMatch) {
-          return {
-            message: "This OTP in Invalid",
-            status: 400,
-            success: false,
-          };
-        }
-
-        const isVerified = isMatched.is_verified;
-
-        const isExpired = isMatched.expires_at < Date.now();
-
-        if (isExpired) {
-          return {
-            message: "This OTP is Expired",
-            status: 400,
-            success: false,
-          };
-        }
-
-        if (isVerified) {
-          return {
-            message: "Otp Verified Successfully",
             status: 200,
             success: true,
           };
         }
 
-        const update = await prisma.register.update({
-          where: {
-            email,
-            otp,
-          },
-          data: {
-            is_verified: true,
-            otp: null,
-          },
+        const sent = await sendMail(email, otp);
+        if (!sent) throw new Error();
+
+        // ✅ NEW USER → use register table
+        const hashedOtp = await bcrypt.hash(String(otp), 10);
+
+        const found = await prisma.register.findFirst({
+          where: { email },
         });
 
-        if (!update) {
-          throw new Error();
+        if (found) {
+          await prisma.register.update({
+            where: { email },
+            data: {
+              otp: hashedOtp,
+              expires_at,
+              is_verified: false,
+            },
+          });
+        } else {
+          await prisma.register.create({
+            data: {
+              email,
+              otp: hashedOtp,
+              expires_at,
+            },
+          });
         }
+
         return {
-          message: "Otp Verified Successfully",
-          status: 200,
+          message: "Otp Send Successfully",
+          status: 201,
           success: true,
         };
       } catch (error) {
-        console.log(error, "error.");
+        console.log(error);
+        return {
+          message: "Something Went wrong",
+          status: 500,
+          success: false,
+          error: error.message,
+        };
+      }
+    },
+    verifyOtp: async (
+      _,
+      { input: { email, otp, device_id, ip_address, location, device_name } },
+      context,
+    ) => {
+      const { response } = context;
+      try {
+        const user = await prisma.users.findFirst({
+          where: { email },
+        });
+
+        if (user) {
+          if (
+            user.account_status === "deleted" ||
+            user.account_status === "suspended"
+          ) {
+            return {
+              message: `Account is ${user.account_status}, contact support`,
+              status: 403,
+              success: false,
+            };
+          }
+          const record = await prisma.otp.findFirst({
+            where: { email },
+          });
+
+          if (!record) {
+            return { message: "OTP not found", status: 400, success: false };
+          }
+
+          const isExpired = new Date(record.expires_at) < new Date();
+          if (isExpired) {
+            return { message: "OTP Expired", status: 400, success: false };
+          }
+
+          // console.log(
+          //   record.otp,
+          //   "record.otp1",
+          //   otp,
+          //   "otp1",
+          //   record,
+          //   email,
+          //   user,
+          // );
+
+          const isMatch = await bcrypt.compare(String(otp), record.otp);
+          if (!isMatch) {
+            return { message: "Invalid OTP", status: 400, success: false };
+          }
+
+          // cleanup
+          await prisma.otp.delete({ where: { email } });
+
+          const accessToken = jwt.sign(
+            { userId: user.id, device_id },
+            process.env.JWT_SECRET,
+            { expiresIn: "15m" },
+          );
+
+          const refreshToken = jwt.sign(
+            { userId: user.id, device_id },
+
+            process.env.REFRESH_SECRET,
+            { expiresIn: "7d" },
+          );
+
+          const addToken = await prisma.devices.upsert({
+            where: {
+              user_id_device_id: {
+                user_id: user.id,
+                device_id,
+              },
+            },
+            update: {
+              ip_address,
+              location,
+              refresh_token: refreshToken,
+              created_at: new Date(),
+              expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            },
+            create: {
+              user_id: user.id,
+              device_id,
+              ip_address,
+              location,
+              device_name,
+              created_at: new Date(),
+              refresh_token: refreshToken,
+              expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            },
+          });
+
+          await context.request.cookieStore?.set("accessToken", accessToken, {
+            httpOnly: true,
+            path: "/",
+            maxAge: 900, // 15 min
+          });
+
+          await context.request.cookieStore?.set("refreshToken", refreshToken, {
+            httpOnly: true,
+            path: "/",
+            maxAge: 604800, // 7 days
+          });
+          return {
+            message: "Login Successful",
+            status: 200,
+            success: true,
+            user,
+          };
+        }
+
+        // =========================
+        // ✅ NEW USER REGISTER
+        // =========================
+        const record = await prisma.register.findFirst({
+          where: { email },
+        });
+
+        if (!record) {
+          return {
+            message: "Invalid Email",
+            status: 400,
+            success: false,
+          };
+        }
+
+        const isExpired = new Date(record.expires_at) < new Date();
+        if (isExpired) {
+          return {
+            message: "OTP Expired",
+            status: 400,
+            success: false,
+          };
+        }
+
+        const isMatch = await bcrypt.compare(String(otp), record.otp);
+        if (!isMatch) {
+          return {
+            message: "Invalid OTP",
+            status: 400,
+            success: false,
+          };
+        }
+
+        // create user
+        // const newUser = await prisma.users.create({
+        //   data: { email },
+        // });
+
+        await prisma.register.update({
+          where: { email },
+          data: {
+            is_verified: true,
+          },
+        });
+
+        return {
+          message: "OTP Verified Successfully",
+          status: 200,
+          success: true,
+          data: {
+            email,
+          },
+        };
+      } catch (error) {
+        console.log(error);
         return {
           message: "Something went wrong",
           status: 500,
           success: false,
+          error: error.message,
         };
       }
     },
@@ -220,7 +324,7 @@ export const resolvers = {
           user_name,
           email,
           mobile,
-          about = "Hey! There I am usibg chat App",
+          bio = "Hey! There I am using chat App",
           profile_pic = "",
         },
       },
@@ -271,16 +375,16 @@ export const resolvers = {
 
           const expires_at = new Date(Date.now() + 5 * 60 * 1000); // 5 min
           const otp = Math.floor(100000 + Math.random() * 900000);
-
+          console.log(otp, "OTP");
           // generated OTP
 
-          const hashedOtp = bcrypt.hash(otp, SALT_ROUNDS);
+          const hashedOtp = await bcrypt.hash(otp.toString(), SALT_ROUNDS);
           const updated = await prisma.register.update({
             where: {
               email,
             },
             data: {
-              otp: String(hashedOtp),
+              otp: hashedOtp.toString(),
               expires_at,
             },
           });
@@ -303,9 +407,8 @@ export const resolvers = {
               email,
               mobile,
               user_name,
-              bio: about,
+              bio,
               profile_pic,
-              is_verified: true,
             },
           }),
           prisma.register.delete({
@@ -321,8 +424,8 @@ export const resolvers = {
 
         return {
           message: "User Successfully created",
-          status: 400,
-          success: false,
+          status: 201,
+          success: true,
         };
       } catch (error) {
         console.log(error);
@@ -330,8 +433,374 @@ export const resolvers = {
           message: "Something went wrong",
           status: 400,
           success: false,
+          error: error.message,
+        };
+      }
+    },
+    updateUser: async (_, { input }, ctx) => {
+      if (!ctx) {
+        throw new Error("Unauthorized User");
+      }
+      const updateData = {};
+
+      for (const key in input) {
+        if (input[key] !== undefined) {
+          updateData[key] = input[key];
+        }
+      }
+
+      if (Object.keys(updateData).length === 0) {
+        return {
+          message: "Input field is missing",
+          status: 400,
+          success: false,
+        };
+      }
+
+      try {
+        const payload = await validateToken(ctx);
+        const updated = await prisma.users.update({
+          where: {
+            id: 1,
+          },
+          data: updateData,
+        });
+        if (!updated) {
+          throw new Error();
+        }
+
+        return {
+          message: "User Updated Successfully",
+          status: 201,
+          success: true,
+        };
+      } catch (error) {
+        return {
+          message: "Something Went Wrong",
+          status: 500,
+          success: false,
+          error: error.message,
+        };
+      }
+    },
+    deleteUser: async (_, { action_type }, ctx) => {
+      if (!ctx) {
+        throw new Error("Unauthorized User");
+      }
+      try {
+        const payload = await validateToken(ctx);
+
+        const exists = await prisma.users.findFirst({
+          where: {
+            id: payload.userId,
+          },
+        });
+
+        if (!exists) {
+          throw new Error("User not found");
+        }
+
+        const enums = ["delete", "suspend"];
+        if (
+          (action_type === "delete" && exists.account_status === "deleted") ||
+          (action_type === "suspend" && exists.account_status === "suspended")
+        ) {
+          return {
+            message: `Your account is already ${exists.account_status}ed.`,
+            status: 403,
+            success: false,
+          };
+        }
+
+        if (!enums.includes(action_type.toLowerCase())) {
+          throw new Error("Invalid action type");
+        }
+
+        const [deleted, loggedout] = await Promise.all([
+          prisma.users.update({
+            where: {
+              id: payload.userId,
+              OR: [
+                { account_status: "active" },
+                {
+                  account_status: "suspended",
+                },
+              ],
+            },
+            data: {
+              account_status:
+                action_type.toLowerCase() === "delete"
+                  ? "deleted"
+                  : "suspended",
+              account_status_changed_at: new Date(),
+            },
+          }),
+          prisma.devices.updateMany({
+            where: {
+              user_id: payload.userId,
+            },
+            data: {
+              refresh_token: null,
+              logged_out_at: new Date(),
+            },
+          }),
+        ]);
+
+        if (!deleted || !loggedout) {
+          throw new Error();
+        }
+
+        await ctx.request.cookieStore?.delete("accessToken", {
+          path: "/",
+        });
+        await ctx.request.cookieStore?.delete("refreshToken", {
+          path: "/",
+        });
+        return {
+          message: `User ${action_type === "delete" ? "Deleted" : "Suspended"} Successfully`,
+          status: 200,
+          success: true,
+        };
+
+        // await ctx.request.cookieStore?.delete("accessToken", {
+      } catch (err) {
+        console.log(err.message, "errror");
+        return {
+          message: "Something Went Wrong",
+          status: 500,
+          success: false,
+          error: err.message,
+        };
+      }
+    },
+    generateRefreshToken: async (_, __, ctx) => {
+      try {
+        const cookie = await ctx.request.cookieStore?.get("refreshToken");
+        if (!cookie) throw new Error("No refresh token");
+
+        const refreshToken = cookie.value;
+
+        let payload;
+        try {
+          payload = jwt.verify(refreshToken, process.env.REFRESH_SECRET);
+        } catch (err) {
+          throw new Error("Invalid refresh token");
+        }
+
+        const device = await prisma.devices.findFirst({
+          where: {
+            user_id: payload.userId,
+            refresh_token: refreshToken,
+          },
+        });
+
+        if (!device) throw new Error("Token revoked");
+
+        // 🔁 new access token generate
+        const newAccessToken = jwt.sign(
+          { userId: payload.userId },
+          process.env.JWT_SECRET,
+          { expiresIn: "15m" },
+        );
+
+        await ctx.request.cookieStore?.set("accessToken", newAccessToken, {
+          httpOnly: true,
+          path: "/",
+          maxAge: 900,
+        });
+
+        return {
+          message: "Token refreshed",
+          success: true,
+          status: 200,
+        };
+      } catch (error) {
+        console.log(error, "error in  generated token...");
+        return {
+          message: "Failed to refresh token",
+          success: false,
+          error: error.message,
+          status: 401,
+        };
+      }
+    },
+    logout: async (_, __, context) => {
+      try {
+        const payload = await validateToken(context);
+
+        const loggedout = await prisma.devices.update({
+          where: {
+            user_id_device_id: {
+              user_id: payload.userId,
+              device_id: payload.device_id,
+            },
+          },
+          data: {
+            refresh_token: null,
+            logged_out_at: new Date(),
+          },
+        });
+
+        if (loggedout) {
+          await context.request.cookieStore?.delete("accessToken", {
+            path: "/",
+          });
+          await context.request.cookieStore?.delete("refreshToken", {
+            path: "/",
+          });
+          return {
+            message: "Logout successful",
+            success: true,
+            status: 200,
+          };
+        }
+      } catch (error) {
+        console.log(error);
+        return {
+          message: "Failed to logout",
+          success: false,
+          error: error.message,
+          status: 401,
+        };
+      }
+    },
+    blockUser: async (_, { input: { blocked_user_id, reason } }, ctx) => {
+      if (!ctx) {
+        throw new Error("Unauthorized User");
+      }
+      if (!reason || reason.trim() === "" || !blocked_user_id) {
+        return {
+          message: "Data is missing",
+          status: 400,
+          success: false,
+        };
+      }
+      try {
+        const payload = await validateToken(ctx);
+        const exists = await prisma.users.findFirst({
+          where: {
+            id: blocked_user_id,
+          },
+        });
+
+        if (!exists) {
+          throw new Error("User not found");
+        }
+
+        const existing = await prisma.block.findUnique({
+          where: {
+            user_id_blocked_user_id: {
+              user_id: payload.userId,
+              blocked_user_id,
+            },
+          },
+        });
+
+        if (existing?.blocked) {
+          return {
+            message: "User already blocked",
+            status: 200,
+            success: true,
+          };
+        }
+
+        const blocked = await prisma.block.upsert({
+          where: {
+            user_id_blocked_user_id: {
+              blocked_user_id,
+              user_id: payload.userId,
+            },
+          },
+          update: {
+            blocked: true,
+            reason,
+            blocked_at: new Date(),
+          },
+          create: {
+            user_id: payload.userId,
+            blocked_user_id,
+            blocked: true,
+            reason,
+            blocked_at: new Date(),
+          },
+        });
+
+        if (!blocked) {
+          throw new Error("Failed to block user");
+        }
+
+        return {
+          message: "User Blocked Successfully",
+          status: 200,
+          success: true,
+        };
+      } catch (err) {
+        // console.error(err);
+        return {
+          message: "Failed to block user",
+          status: 500,
+          success: false,
+          error: err.message,
+        };
+      }
+    },
+    unBlockUser: async (_, { input: { blocked_user_id } }, ctx) => {
+      if (!ctx) {
+        throw new Error("Unauthorized User");
+      }
+      if (!blocked_user_id) {
+        return {
+          message: "User ID is missing",
+          status: 400,
+          success: false,
+        };
+      }
+      try {
+        const payload = await validateToken(ctx);
+        const exists = await prisma.users.findFirst({
+          where: {
+            id: blocked_user_id,
+          },
+        });
+
+        if (!exists) {
+          throw new Error("User not found");
+        }
+
+        const updated = await prisma.block.update({
+          where: {
+            user_id_blocked_user_id: {
+              blocked_user_id,
+              user_id: payload.userId,
+            },
+          },
+          data: {
+            blocked: false,
+            reason: null,
+            // blocked_at: null,
+          },
+        });
+
+        if (!updated) {
+          throw new Error("Failed to unblock user");
+        }
+
+        return {
+          message: "User Unblocked Successfully",
+          status: 200,
+          success: true,
+        };
+      } catch (err) {
+        // console.error(err);
+        return {
+          message: "Failed to unblock user",
+          status: 500,
+          success: false,
+          error: err.message,
         };
       }
     },
   },
 };
+
+export default userResolvers;

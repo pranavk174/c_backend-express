@@ -14,9 +14,10 @@ model users {
   bio                                          String?             @db.VarChar(205)
   profile_pic                                  String?             @default("https://static.vecteezy.com/system/resources/previews/024/983/914/large_2x/simple-user-default-icon-free-png.png") @db.VarChar(300)
   email                                        String              @unique @db.VarChar(45)
-  is_deleted                                   Boolean?            @default(false)
-  is_verified                                  Boolean?            @default(false)
   user_name                                    String              @unique @db.VarChar(50)
+  created_at                                   DateTime            @default(now()) @db.Timestamptz(6)
+  account_status                               account_status      @default(active)
+  account_status_changed_at                    DateTime            @default(now()) @db.Timestamptz(6)
   block_block_user_idTousers                   block[]             @relation("block_user_idTousers")
   block_block_blocked_user_idTousers           block[]             @relation("block_blocked_user_idTousers")
   chat_member                                  chat_member[]
@@ -44,32 +45,34 @@ model attachment {
   file_type     file_type_enum
   file_name     String         @db.VarChar(250)
   file_size     BigInt
-  created_at    DateTime       @default(now()) @db.Timestamp(6)
-  updated_at    DateTime       @default(now()) @db.Timestamp(6)
+  created_at    DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime       @default(now()) @db.Timestamptz(6)
   message       message        @relation(fields: [message_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model block {
-  block_id                           Int      @id @default(autoincrement())
+  block_id                           Int       @id @default(autoincrement())
   blocked_user_id                    Int
   user_id                            Int
-  reason                             String?  @db.VarChar(300)
-  blocked_at                         DateTime @default(now()) @db.Timestamp(6)
-  users_block_user_idTousers         users    @relation("block_user_idTousers", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "block_ibfk_1")
-  users_block_blocked_user_idTousers users    @relation("block_blocked_user_idTousers", fields: [blocked_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "block_ibfk_2")
+  reason                             String?   @db.VarChar(300)
+  blocked_at                         DateTime? @default(now()) @db.Timestamptz(6)
+  blocked                            Boolean   @default(false)
+  users_block_user_idTousers         users     @relation("block_user_idTousers", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "block_ibfk_1")
+  users_block_blocked_user_idTousers users     @relation("block_blocked_user_idTousers", fields: [blocked_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "block_ibfk_2")
 
   @@unique([user_id, blocked_user_id])
+  @@unique([user_id, blocked_user_id], map: "uniq_block")
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model chat {
   id          Int            @id @default(autoincrement())
   chat_type   chat_type_enum
-  created_at  DateTime       @default(now()) @db.Timestamp(6)
-  updated_at  DateTime       @default(now()) @db.Timestamp(6)
+  created_at  DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime       @default(now()) @db.Timestamptz(6)
   is_deleted  Boolean?       @default(false)
-  deleted_at  DateTime?      @db.Timestamp(6)
+  deleted_at  DateTime?      @db.Timestamptz(6)
   chat_member chat_member[]
   groups      groups[]
   message     message[]
@@ -81,9 +84,9 @@ model chat {
 model chat_member {
   id        Int       @id @default(autoincrement())
   member_id Int
-  joined_at DateTime  @default(now()) @db.Timestamp(6)
+  joined_at DateTime  @default(now()) @db.Timestamptz(6)
   role      Int?
-  left_at   DateTime? @db.Timestamp(6)
+  left_at   DateTime? @db.Timestamptz(6)
   chat_id   Int
   chat      chat      @relation(fields: [chat_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_chat_member_chat")
   users     users     @relation(fields: [member_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_chat_member_user")
@@ -97,14 +100,20 @@ model chat_member {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model devices {
-  login_id    Int      @id @default(autoincrement())
-  device_id   String   @db.VarChar(100)
-  device_name String   @db.VarChar(100)
-  user_id     Int
-  created_at  DateTime @default(now()) @db.Timestamp(6)
-  ip_address  String?  @db.VarChar(45)
-  location    String   @db.VarChar(200)
-  users       users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  login_id      Int       @id @default(autoincrement())
+  device_id     String    @db.VarChar(100)
+  device_name   String    @db.VarChar(100)
+  user_id       Int
+  created_at    DateTime  @default(now()) @db.Timestamptz(6)
+  ip_address    String?   @db.VarChar(45)
+  location      String    @db.VarChar(200)
+  refresh_token String?   @db.VarChar(250)
+  expires_at    DateTime? @db.Timestamptz(6)
+  last_login    DateTime  @default(now()) @db.Timestamptz(6)
+  logged_out_at DateTime? @db.Timestamptz(6)
+  users         users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, device_id], map: "unique_user_device")
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -113,7 +122,7 @@ model edit_message {
   message_id      Int
   content         String
   old_content     String
-  created_at      DateTime @default(now()) @db.Timestamp(6)
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
   message         message  @relation(fields: [message_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
@@ -124,9 +133,9 @@ model groups {
   created_by_id Int?
   name          String    @db.VarChar(100)
   profile_pic   String?   @db.VarChar(200)
-  created_at    DateTime  @default(now()) @db.Timestamp(6)
-  updated_at    DateTime  @default(now()) @db.Timestamp(6)
-  deleted_at    DateTime? @db.Timestamp(6)
+  created_at    DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime  @default(now()) @db.Timestamptz(6)
+  deleted_at    DateTime? @db.Timestamptz(6)
   is_deleted    Boolean?  @default(false)
   chat          chat      @relation(fields: [chat_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "group_ibfk_1")
   users         users?    @relation(fields: [created_by_id], references: [id], onUpdate: NoAction, map: "group_ibfk_2")
@@ -141,7 +150,7 @@ model message {
   sender_id                                                Int
   content                                                  String?
   story_id                                                 Int?
-  created_at                                               DateTime           @default(now()) @db.Timestamp(6)
+  created_at                                               DateTime           @default(now()) @db.Timestamptz(6)
   is_edited                                                Boolean?           @default(false)
   reply_to_message_id                                      Int?
   forwarded_from_message_id                                Int?
@@ -172,8 +181,8 @@ model message_reaction {
   message_id          Int
   reaction_id         Int
   user_id             Int
-  created_at          DateTime @default(now()) @db.Timestamp(6)
-  updated_at          DateTime @default(now()) @db.Timestamp(6)
+  created_at          DateTime @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime @default(now()) @db.Timestamptz(6)
   message             message  @relation(fields: [message_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   reaction            reaction @relation(fields: [reaction_id], references: [react_id], onDelete: NoAction, onUpdate: NoAction)
   users               users    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -190,7 +199,7 @@ model notification {
   reference_id                          Int?
   metadata                              Json?
   is_seen                               Boolean?               @default(false)
-  created_at                            DateTime?              @default(now()) @db.Timestamp(6)
+  created_at                            DateTime?              @default(now()) @db.Timestamptz(6)
   users_notification_receiver_idTousers users                  @relation("notification_receiver_idTousers", fields: [receiver_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   users_notification_sender_idTousers   users?                 @relation("notification_sender_idTousers", fields: [sender_id], references: [id], onUpdate: NoAction)
   notification_seen                     notification_seen[]
@@ -201,7 +210,7 @@ model notification_seen {
   seen_id         Int          @id @default(autoincrement())
   user_id         Int
   notification_id Int
-  seen_at         DateTime     @default(now()) @db.Timestamp(6)
+  seen_at         DateTime     @default(now()) @db.Timestamptz(6)
   notification    notification @relation(fields: [notification_id], references: [notification_id], onDelete: Cascade, onUpdate: NoAction)
   users           users        @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
@@ -209,10 +218,10 @@ model notification_seen {
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model otp {
   otp_id     Int      @id @default(autoincrement())
-  email_id   String   @db.VarChar(100)
-  otp        String?  @db.Char(6)
-  created_at DateTime @default(now()) @db.Timestamp(6)
-  expires_at DateTime @db.Timestamp(6)
+  email      String   @unique(map: "unique_email_id") @db.VarChar(100)
+  otp        String?  @db.VarChar(255)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  expires_at DateTime @db.Timestamptz(6)
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -221,7 +230,7 @@ model privacy_settings {
   user_id      Int
   entity_type  entity_type_enum
   privacy_type privacy_type_enum
-  created_at   DateTime?         @default(now()) @db.Timestamp(6)
+  created_at   DateTime?         @default(now()) @db.Timestamptz(6)
   users        users             @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   privacy_user privacy_user[]
 
@@ -233,7 +242,7 @@ model privacy_user {
   p_user_id        Int              @id @default(autoincrement())
   target_user_id   Int
   privacy_id       Int
-  created_at       DateTime?        @default(now()) @db.Timestamp(6)
+  created_at       DateTime?        @default(now()) @db.Timestamptz(6)
   privacy_settings privacy_settings @relation(fields: [privacy_id], references: [privacy_id], onDelete: Cascade, onUpdate: NoAction)
   users            users            @relation(fields: [target_user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
@@ -244,7 +253,7 @@ model privacy_user {
 model reaction {
   react_id         Int                @id @default(autoincrement())
   emoji            String?            @db.VarChar(10)
-  created_at       DateTime           @default(now()) @db.Timestamp(6)
+  created_at       DateTime           @default(now()) @db.Timestamptz(6)
   message_reaction message_reaction[]
   story_likes      story_likes[]
 }
@@ -253,9 +262,9 @@ model reaction {
 model register {
   id          Int      @id @default(autoincrement())
   email       String   @unique @db.VarChar(100)
-  otp         String   @db.Char(6)
-  created_at  DateTime @default(now()) @db.Timestamp(6)
-  expires_at  DateTime @db.Timestamp(6)
+  otp         String   @db.VarChar(255)
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  expires_at  DateTime @db.Timestamptz(6)
   is_verified Boolean? @default(false)
 }
 
@@ -264,7 +273,7 @@ model seen_message {
   seen_id    Int       @id @default(autoincrement())
   message_id Int
   user_id    Int
-  seen_at    DateTime? @default(now()) @db.Timestamp(6)
+  seen_at    DateTime? @default(now()) @db.Timestamptz(6)
   message    message   @relation(fields: [message_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   users      users     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
@@ -276,9 +285,10 @@ model story {
   id          Int           @id @default(autoincrement())
   user_id     Int
   content     String        @db.VarChar(200)
-  created_at  DateTime      @default(now()) @db.Timestamp(6)
-  expires_at  DateTime      @db.Timestamp(6)
+  created_at  DateTime      @default(now()) @db.Timestamptz(6)
+  expires_at  DateTime      @db.Timestamptz(6)
   is_deleted  Boolean?      @default(false)
+  text_data   String?
   message     message[]
   users       users         @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_story_user")
   story_likes story_likes[]
@@ -290,14 +300,15 @@ model story {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model story_likes {
-  like_id     Int      @id @default(autoincrement())
+  like_id     Int       @id @default(autoincrement())
   story_id    Int
   user_id     Int
-  reaction_id Int
-  created_at  DateTime @default(now()) @db.Timestamp(6)
-  reaction    reaction @relation(fields: [reaction_id], references: [react_id], onDelete: Cascade, onUpdate: NoAction)
-  story       story    @relation(fields: [story_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  users       users    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  reaction_id Int?
+  created_at  DateTime  @default(now()) @db.Timestamptz(6)
+  liked       Boolean
+  reaction    reaction? @relation(fields: [reaction_id], references: [react_id], onDelete: Cascade, onUpdate: NoAction)
+  story       story     @relation(fields: [story_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users       users     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([story_id, user_id])
 }
@@ -307,7 +318,7 @@ model story_seen {
   seen_id  Int      @id @default(autoincrement())
   user_id  Int
   story_id Int
-  seen_at  DateTime @default(now()) @db.Timestamp(6)
+  seen_at  DateTime @default(now()) @db.Timestamptz(6)
   story    story    @relation(fields: [story_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   users    users    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
@@ -318,8 +329,8 @@ model story_seen {
 model user_presence {
   user_id    Int       @id
   is_online  Boolean?  @default(false)
-  last_seen  DateTime? @db.Timestamp(6)
-  updated_at DateTime? @default(now()) @db.Timestamp(6)
+  last_seen  DateTime? @db.Timestamptz(6)
+  updated_at DateTime? @default(now()) @db.Timestamptz(6)
   users      users     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
@@ -355,4 +366,10 @@ enum privacy_type_enum {
   contacts
   only_share_with
   contacts_except
+}
+
+enum account_status {
+  deleted
+  active
+  suspended
 }
