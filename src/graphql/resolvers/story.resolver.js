@@ -74,15 +74,181 @@ GROUP BY s.id;
       try {
         const payload = await validateToken(ctx);
         const stories = await prisma.$queryRaw`
-SELECT 
-  s.*,  
-        
-    COUNT(sl.story_id) AS likes_count
-FROM story s
-LEFT JOIN story_likes sl
-ON s.id = sl.story_id
-WHERE s.is_deleted = false AND s.user_id = ${payload.userId} AND s.expires_at > NOW()
-GROUP BY s.id;
+   SELECT 
+        s.*,
+
+        COUNT(DISTINCT sl.story_id) AS likes_count
+
+    FROM story s
+
+    LEFT JOIN story_likes sl
+    ON sl.story_id = s.id
+
+    WHERE
+
+        -- =====================================
+        -- STORY BASIC FILTERS
+        -- =====================================
+
+        s.is_deleted = false
+
+        AND s.expires_at > NOW()
+
+        -- =====================================
+        -- BLOCK CHECK
+        -- =====================================
+
+        AND NOT EXISTS (
+
+            SELECT 1
+
+            FROM blocked_users bu
+
+            WHERE
+
+            (
+                bu.user_id = s.user_id
+                AND bu.blocked_user_id = ${payload.userId}
+            )
+
+            OR
+
+            (
+                bu.user_id = ${payload.userId}
+                AND bu.blocked_user_id = s.user_id
+            )
+
+        )
+
+        -- =====================================
+        -- PRIVACY LOGIC
+        -- =====================================
+
+        AND (
+
+            -- =================================
+            -- OWN STORIES
+            -- =================================
+
+            s.user_id = ${payload.userId}
+
+            -- =================================
+            -- PUBLIC STORIES
+            -- =================================
+
+            OR EXISTS (
+
+                SELECT 1
+
+                FROM privacy_settings ps
+
+                WHERE
+
+                ps.user_id = s.user_id
+
+                AND ps.entity_type = 'STORY'
+
+                AND ps.privacy_type = 'PUBLIC'
+
+            )
+
+            -- =================================
+            -- ONLY ME
+            -- =================================
+
+            OR EXISTS (
+
+                SELECT 1
+
+                FROM privacy_settings ps
+
+                WHERE
+
+                ps.user_id = s.user_id
+
+                AND ps.entity_type = 'STORY'
+
+                AND ps.privacy_type = 'ONLY_ME'
+
+                AND s.user_id = ${payload.userId}
+
+            )
+
+            -- =================================
+            -- CUSTOM
+            -- =================================
+
+            OR EXISTS (
+
+                SELECT 1
+
+                FROM privacy_settings ps
+
+                JOIN privacy_user pu
+                ON pu.privacy_id = ps.privacy_id
+
+                WHERE
+
+                ps.user_id = s.user_id
+
+                AND ps.entity_type = 'STORY'
+
+                AND ps.privacy_type = 'CUSTOM'
+
+                AND pu.target_user_id = ${payload.userId}
+
+            )
+
+            -- =================================
+            -- EXCEPT USERS
+            -- =================================
+
+            OR (
+
+                EXISTS (
+
+                    SELECT 1
+
+                    FROM privacy_settings ps
+
+                    WHERE
+
+                    ps.user_id = s.user_id
+
+                    AND ps.entity_type = 'STORY'
+
+                    AND ps.privacy_type = 'EXCEPT_USERS'
+
+                )
+
+                AND NOT EXISTS (
+
+                    SELECT 1
+
+                    FROM privacy_settings ps
+
+                    JOIN privacy_user pu
+                    ON pu.privacy_id = ps.privacy_id
+
+                    WHERE
+
+                    ps.user_id = s.user_id
+
+                    AND ps.entity_type = 'STORY'
+
+                    AND ps.privacy_type = 'EXCEPT_USERS'
+
+                    AND pu.target_user_id = ${payload.userId}
+
+                )
+
+            )
+
+        )
+
+    GROUP BY s.id
+
+    ORDER BY s.created_at DESC;
 `;
 
         console.log(stories, "storiesssss");
@@ -393,107 +559,106 @@ chat_id ,sender_id ,content ,story_id, created_at) values(${chatid[0].chat_id} ,
         };
       }
     },
-    //     forwardStory: async (_, { id, recipientIds }, ctx) => {
-    //       if (!ctx) {
-    //         throw new Error("Unauthorized User");
-    //       }
-    //       if (!recipientIds || recipientIds.length === 0) {
-    //         return {
-    //           message: "At least one recipient ID is required",
-    //           status: 400,
-    //           success: false,
-    //         };
-    //       }
-    //       try {
-    //         const payload = await validateToken(ctx);
-    //         const storyData = await story.findFirst({
-    //           where: { id: parseInt(id), is_deleted: false },
-    //         });
-    //         if (!storyData) {
-    //           return {
-    //             message: "Story not found",
-    //             status: 404,
-    //             success: false,
-    //           };
-    //         }
+    forwardStory: async (_, { input: { storyId, targets, message } }, ctx) => {
+      if (!ctx) {
+        throw new Error("Unauthorized User");
+      }
+      if (!targets || targets.length === 0) {
+        return {
+          message: "At least one target is required",
+          status: 400,
+          success: false,
+        };
+      }
+      try {
+        const payload = await validateToken(ctx);
+        const storyData = await story.findFirst({
+          where: { id: parseInt(storyId), is_deleted: false },
+        });
 
-    //         const [forwarded] = await Promise.all(
-    //           recipientIds.map(async (recipientId) => {
-    //             const chatid = await prisma.$queryRaw`
+        if (!storyData) {
+          return {
+            message: "Story not found",
+            status: 404,
+            success: false,
+          };
+        }
 
-    //             select chat_id from chat_members where member_id in (parseInt(payload.userId), ${parseInt(recipientId)}) GROUP BY chat_id
-    // HAVING COUNT(DISTINCT member_id) = 2;
+        const forwarded = await Promise.all(
+          targets.map(async (target) => {
+            if (target.type === "private") {
+              if (!target.chatId) {
+                const chatData = await chat.create({
+                  data: {
+                    chat_type: "private",
+                    created_at: new Date(),
+                  },
+                });
+                await chat_member.createMany({
+                  data: [
+                    {
+                      chat_id: chatData.id,
+                      member_id: payload.userId,
+                      joined_at: new Date(),
+                    },
+                    {
+                      chat_id: chatData.id,
+                      member_id: target.recipientId,
+                      joined_at: new Date(),
+                    },
+                  ],
+                });
+                const forward = await prisma.$queryRaw`
+                insert into message (
+                  chat_id ,sender_id ,content ,story_id, created_at) values(${parseInt(chatData.id)} , ${parseInt(payload.userId)} , ${message}, ${parseInt(storyData.id)}, NOW()
+                )
+                `;
+              } else {
+                const forward = await prisma.$queryRaw`
+                insert into message (
+                  chat_id ,sender_id ,content ,story_id, created_at) values(${parseInt(target.chatId)} , ${parseInt(payload.userId)} , ${message}, ${parseInt(storyData.id)}, NOW()
+                )
+                `;
+              }
+            } else if (target.type === "group") {
+              const isMember = await chat_member.findFirst({
+                where: {
+                  chat_id: parseInt(target.chatId),
+                  member_id: payload.userId,
+                },
+              });
 
-    //             `;
+              if (!isMember) {
+                throw new Error("You are not a member of the target group");
+              }
 
-    //             if (!chatid || chatid.length === 0) {
-    //               const chatData = await chat.create({
-    //                 data: {
-    //                   chat_type: "private",
-    //                   created_at: new Date(),
-    //                 },
-    //               });
+              const forward = await prisma.$queryRaw`
+                insert into message (
+                  chat_id ,sender_id ,content ,story_id, created_at) values(${parseInt(target.chatId)} , ${parseInt(payload.userId)} , ${message}, ${parseInt(storyData.id)}, NOW()
+                )
+                `;
+            }
+          }),
+        );
 
-    //               await chat_member.createMany({
-    //                 data: [
-    //                   {
-    //                     chat_id: chatData.id,
-    //                     member_id: payload.userId,
-    //                     joined_at: new Date(),
-    //                   },
-    //                   {
-    //                     chat_id: chatData.id,
-    //                     member_id: recipientId,
-    //                     joined_at: new Date(),
-    //                   },
-    //                 ],
-    //               });
+        if (forwarded.length === 0) {
+          throw new Error("Failed to forward story to any recipient");
+        }
 
-    //               const forward = await prisma.$queryRaw`
-    // insert into message (
-    // chat_id ,sender_id ,content ,story_id, created_at) values(${chatData.id} , ${parseInt(payload.userId)} , 'Forwarded Story', ${parseInt(storyData.id)}, NOW()
-    // )
-    //             `;
-    //               if (!forward) {
-    //                 throw new Error(
-    //                   `Failed to forward story to recipient ID ${recipientId}`,
-    //                 );
-    //               }
-    //               return forward;
-    //             }
-
-    //             const forward = await prisma.$queryRaw`
-    // insert into message (
-    // chat_id ,sender_id ,content ,story_id, created_at) values(${chatid[0].chat_id} , ${parseInt(payload.userId)} , 'Forwarded Story', ${parseInt(storyData.id)}, NOW()
-    // )
-    //               `;
-    //             if (!forward) {
-    //               throw new Error(
-    //                 `Failed to forward story to recipient ID ${recipientId}`,
-    //               );
-    //             }
-    //             return forward;
-    //           }),
-    //         );
-
-    //         if (forwarded.length === 0) {
-    //           throw new Error("Failed to forward story to any recipient");
-    //         }
-
-    //         return {
-    //           message: "Story forwarded successfully",
-    //           status: 200,
-    //           success: true,
-    //         };
-    //       } catch (error) {
-    //         return {
-    //           message: "Something went wrong",
-    //           status: 500,
-    //           success: false,
-    //           error: error.message,
-    //         };
-    //       }
-    //     },
+        return {
+          message: "Story forwarded successfully",
+          status: 200,
+          success: true,
+        };
+      } catch (error) {
+        return {
+          message: "Something went wrong",
+          status: 500,
+          success: false,
+          error: error.message,
+        };
+      }
+    },
     deleteStory: async (_, { id }, ctx) => {
       if (!ctx) {
         throw new Error("Unauthorized User");

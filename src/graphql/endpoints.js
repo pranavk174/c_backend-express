@@ -16,6 +16,11 @@ const baseSchema = readFileSync(
   "utf-8",
 );
 
+const PrivacySchema = readFileSync(
+  new URL("./schema/privacy.schema.gql", import.meta.url),
+  "utf-8",
+);
+
 const userSchema = readFileSync(
   new URL("./schema/user.schema.gql", import.meta.url),
   "utf-8",
@@ -26,7 +31,7 @@ const storySchema = readFileSync(
   "utf-8",
 );
 
-const typeDefs = baseSchema + userSchema + storySchema;
+const typeDefs = baseSchema + userSchema + storySchema + PrivacySchema;
 
 const schema = createSchema({
   typeDefs,

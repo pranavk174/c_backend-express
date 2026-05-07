@@ -38,6 +38,21 @@ type storyApiResponse implements apiResponse {
   error: String
 }
 
+enum ForwardType {
+  private
+  group
+}
+input ForwardTargetInput {
+  type: ForwardType!
+  recipientId: Int
+  chatId: Int
+}
+input ForwardStoryInput {
+  storyId: Int!
+  message: String
+  targets: [ForwardTargetInput!]!
+}
+
 extend type Query {
   getStoryById(id: ID!): storyApiResponse!
   getAllStories: storyApiResponse!
@@ -49,4 +64,5 @@ extend type Mutation {
   replyToStory(id: ID!, content: String!): storyApiResponse!
   seenStory(id: ID!): storyApiResponse!
   likeStory(input: storyLikeInput!): storyApiResponse!
+  forwardStory(input: ForwardStoryInput!): storyApiResponse!
 }

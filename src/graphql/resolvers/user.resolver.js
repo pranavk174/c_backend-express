@@ -218,7 +218,7 @@ const userResolvers = {
               ip_address,
               location,
               refresh_token: refreshToken,
-              created_at: new Date(),
+              last_login: new Date(),
               expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
             },
             create: {
@@ -227,6 +227,7 @@ const userResolvers = {
               ip_address,
               location,
               device_name,
+              last_login: new Date(),
               created_at: new Date(),
               refresh_token: refreshToken,
               expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
