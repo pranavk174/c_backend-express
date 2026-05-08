@@ -20,7 +20,7 @@ export const privacyResolvers = {
   //   },
   Query: {
     getPrivacySettings: async (_, __, ctx) => {
-      const payload = validateToken(ctx);
+      const payload = await validateToken(ctx);
       const userId = payload.userId;
       if (!userId) {
         throw new Error("Unauthorized");
@@ -36,12 +36,15 @@ export const privacyResolvers = {
           throw new Error("No privacy settings found for the user");
         }
 
+        console.log(settings, "setting.....");
+
         return {
           message: "Successfully retrieved privacy settings",
           status: 200,
           success: true,
           data: {
-            settings: settings,
+            __typename: "PrivacyList",
+            items: settings,
           },
         };
       } catch (error) {
@@ -52,6 +55,46 @@ export const privacyResolvers = {
           error: error.message,
           status: 500,
           success: false,
+        };
+      }
+    },
+    getPrivacyUsers: async (_, { privacy_id }, ctx) => {
+      const payload = await validateToken(ctx);
+      const userId = payload.userId;
+
+      if (!userId) {
+        throw new Error("Unauthorized");
+      }
+      try {
+        const privacyUsers = await prisma.$queryRaw`
+                                select u.id,u.name
+                                from users u
+                                inner join privacy_user p
+                                on p.target_user_id = u.id
+                                where p.privacy_id = ${privacy_id};
+        `;
+
+        if (!privacyUsers) {
+          throw new Error();
+        }
+
+        console.log(privacyUsers, "privacyUserssss");
+
+        return {
+          message: "Successfully retrieved privacy users",
+          status: 200,
+          success: true,
+          data: {
+            __typename: "UserList",
+            items: privacyUsers,
+          },
+        };
+      } catch (error) {
+        return {
+          message: "Something went wrong",
+          success: false,
+          status: 500,
+          error: error.message,
         };
       }
     },
@@ -115,6 +158,7 @@ export const privacyResolvers = {
     },
     updatePrivacyUsers: async (_, { input: { users, privacy_id } }, ctx) => {
       const payload = await validateToken(ctx);
+
       const userId = payload.userId;
 
       if (!users || users.length === 0 || !privacy_id) {
@@ -166,7 +210,7 @@ export const privacyResolvers = {
           success: true,
         };
       } catch (error) {
-        console.log(error, "error");
+        // console.log(error, "error");
         return {
           message: "Failed to update privacy users",
           error: error.message,

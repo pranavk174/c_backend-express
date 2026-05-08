@@ -10,16 +10,26 @@ input PrivacyUserInput {
   users: [ID!]!
 }
 
+type PrivacyList {
+  items: [Privacy!]!
+}
+
+type UserList {
+  items: [User!]!
+}
+
+union P_Response = PrivacyList | UserList
+
 type PrivacyResponse implements apiResponse {
   message: String!
   status: Int!
   success: Boolean!
   error: String
-  data: [Privacy]
+  data: P_Response
 }
 
 extend type Query {
-  getPrivacySettings(entity_type: String!, entity_id: ID!): PrivacyResponse!
+  getPrivacySettings: PrivacyResponse!
   getPrivacyUsers(privacy_id: ID!): PrivacyResponse!
 }
 
