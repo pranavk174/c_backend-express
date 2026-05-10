@@ -1,0 +1,63 @@
+type Chats {
+  chat_id: String!
+  user_id: ID!
+  profile_pic: String
+  last_message: String
+  last_message_at: String
+  name: String!
+  chat_type: String!
+}
+
+type Chat {
+
+  id :ID!
+  sender_id : Int!
+  created_at: String!
+  seen_at : String
+  is_forwarded : Boolean!
+  content: String
+  story_id : Int
+  is_edited : Boolean!
+  reply_to_message : Int
+  is_deleted : Boolean
+
+
+
+
+
+
+}
+
+type SingleChat {
+  items: [Chat]
+}
+type AllChats {
+  items: [Chats]
+}
+
+union ChatResponse = SingleChat | AllChats
+
+
+
+type chatApiResponse implements apiResponse{
+  message: String!
+  status: Int!
+  success: Boolean!
+  error: String
+  data : ChatResponse
+}
+
+input ChatInput{
+  user_id :Int!
+  chat_id: Int
+  message :String!
+}
+
+ extend type Query{
+  getChatById (chat_id: ID!): chatApiResponse!
+  getAllChats:chatApiResponse!
+ }
+
+ extend type Mutation{
+  sendMessage(input:ChatInput): chatApiResponse!
+ }

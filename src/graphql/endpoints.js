@@ -31,7 +31,9 @@ const storySchema = readFileSync(
   "utf-8",
 );
 
-const typeDefs = baseSchema + userSchema + storySchema + PrivacySchema;
+const chatResolver = readFileSync(new URL('./schema/chats.schema.gql', import.meta.url), "utf-8")
+
+const typeDefs = baseSchema + userSchema + storySchema + PrivacySchema + chatResolver;
 
 const schema = createSchema({
   typeDefs,
