@@ -439,7 +439,8 @@ const userResolvers = {
       }
     },
     updateUser: async (_, { input }, ctx) => {
-      if (!ctx) {
+      const payload = await validateToken(ctx)
+      if (!payload.userId) {
         throw new Error("Unauthorized User");
       }
       const updateData = {};
@@ -462,7 +463,7 @@ const userResolvers = {
         const payload = await validateToken(ctx);
         const updated = await prisma.users.update({
           where: {
-            id: 1,
+            id: payload.userId,
           },
           data: updateData,
         });
@@ -485,11 +486,12 @@ const userResolvers = {
       }
     },
     deleteUser: async (_, { action_type }, ctx) => {
-      if (!ctx) {
-        throw new Error("Unauthorized User");
-      }
+
       try {
         const payload = await validateToken(ctx);
+        if (!payload.userId) {
+          throw new Error("Unauthorized User");
+        }
 
         const exists = await prisma.users.findFirst({
           where: {
@@ -666,9 +668,12 @@ const userResolvers = {
       }
     },
     blockUser: async (_, { input: { blocked_user_id, reason } }, ctx) => {
-      if (!ctx) {
+
+      const payload = await validateToken(context);
+      if (!payload.userId) {
         throw new Error("Unauthorized User");
       }
+
       if (!reason || reason.trim() === "" || !blocked_user_id) {
         return {
           message: "Data is missing",
@@ -677,7 +682,7 @@ const userResolvers = {
         };
       }
       try {
-        const payload = await validateToken(ctx);
+
         const exists = await prisma.users.findFirst({
           where: {
             id: blocked_user_id,
@@ -746,7 +751,8 @@ const userResolvers = {
       }
     },
     unBlockUser: async (_, { input: { blocked_user_id } }, ctx) => {
-      if (!ctx) {
+      const payload = await validateToken(ctx);
+      if (!payload.userId) {
         throw new Error("Unauthorized User");
       }
       if (!blocked_user_id) {
@@ -757,7 +763,7 @@ const userResolvers = {
         };
       }
       try {
-        const payload = await validateToken(ctx);
+
         const exists = await prisma.users.findFirst({
           where: {
             id: blocked_user_id,
