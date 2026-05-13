@@ -151,6 +151,8 @@ export const fileUpload = async (req, res) => {
       fileUrl: result.secure_url,
       public_id: result.public_id,
       fileName: req.file.originalname,
+      fileSize: req.file.size,
+      fileType: req.file.mimetype,
     });
   } catch (error) {
     console.log(error);

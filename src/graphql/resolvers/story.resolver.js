@@ -18,9 +18,9 @@ const Storyresolver = {
     },
   },
   Query: {
-    getStoryById: async (_, { id }, ctx) => {
+    getStoryById: async (_, { id }, context) => {
       try {
-        const payload = await validateToken(ctx);
+        const payload = context.user;
         const storyData = await story.findFirst({
           where: {
             id: parseInt(id),
@@ -70,9 +70,9 @@ GROUP BY s.id;
         };
       }
     },
-    getAllStories: async (_, __, ctx) => {
+    getAllStories: async (_, __, context) => {
       try {
-        const payload = await validateToken(ctx);
+        const payload = context.user;
         const stories = await prisma.$queryRaw`
    SELECT 
         s.*,
@@ -271,11 +271,7 @@ GROUP BY s.id;
     },
   },
   Mutation: {
-    createStory: async (_, { input: { content, text_data } }, ctx) => {
-      if (!ctx) {
-        throw new Error("Unauthorized User");
-      }
-
+    createStory: async (_, { input: { content, text_data } }, context) => {
       if (!content || content.trim() === "") {
         return {
           message: "Content is required",
@@ -283,7 +279,7 @@ GROUP BY s.id;
         };
       }
       try {
-        const payload = await validateToken(ctx);
+        const payload = context.user;
 
         const storyData = await story.create({
           data: {
@@ -308,11 +304,7 @@ GROUP BY s.id;
         };
       }
     },
-    likeStory: async (_, { input: { id, like, reaction_id } }, ctx) => {
-      if (!ctx) {
-        throw new Error("Unauthorized User");
-      }
-
+    likeStory: async (_, { input: { id, like, reaction_id } }, context) => {
       if (!id || like === null || like === undefined) {
         return {
           message: "Like value is required",
@@ -321,7 +313,7 @@ GROUP BY s.id;
         };
       }
       try {
-        const payload = await validateToken(ctx);
+        const payload = context.user;
 
         const storyData = await story.findFirst({
           where: { id: parseInt(id), is_deleted: false },
@@ -381,10 +373,7 @@ GROUP BY s.id;
         };
       }
     },
-    seenStory: async (_, { id }, ctx) => {
-      if (!ctx) {
-        throw new Error("Unauthorized User");
-      }
+    seenStory: async (_, { id }, context) => {
       if (!id) {
         return {
           message: "Story ID is required",
@@ -393,7 +382,7 @@ GROUP BY s.id;
         };
       }
       try {
-        const payload = await validateToken(ctx);
+        const payload = context.user;
         const storyData = await story.findFirst({
           where: { id: parseInt(id), is_deleted: false },
         });
@@ -456,11 +445,7 @@ GROUP BY s.id;
         };
       }
     },
-    replyToStory: async (_, { id, content }, ctx) => {
-      if (!ctx) {
-        throw new Error("Unauthorized User");
-      }
-
+    replyToStory: async (_, { id, content }, context) => {
       if (!content || content.trim() === "") {
         return {
           message: "Content is required",
@@ -469,7 +454,7 @@ GROUP BY s.id;
         };
       }
       try {
-        const payload = await validateToken(ctx);
+        const payload = context.user;
 
         console.log(payload, "payloadddddd");
         const storyData = await story.findFirst({
@@ -559,10 +544,11 @@ chat_id ,sender_id ,content ,story_id, created_at) values(${chatid[0].chat_id} ,
         };
       }
     },
-    forwardStory: async (_, { input: { storyId, targets, message } }, ctx) => {
-      if (!ctx) {
-        throw new Error("Unauthorized User");
-      }
+    forwardStory: async (
+      _,
+      { input: { storyId, targets, message } },
+      context,
+    ) => {
       if (!targets || targets.length === 0) {
         return {
           message: "At least one target is required",
@@ -571,7 +557,7 @@ chat_id ,sender_id ,content ,story_id, created_at) values(${chatid[0].chat_id} ,
         };
       }
       try {
-        const payload = await validateToken(ctx);
+        const payload = context.user;
         const storyData = await story.findFirst({
           where: { id: parseInt(storyId), is_deleted: false },
         });
@@ -659,12 +645,9 @@ chat_id ,sender_id ,content ,story_id, created_at) values(${chatid[0].chat_id} ,
         };
       }
     },
-    deleteStory: async (_, { id }, ctx) => {
-      if (!ctx) {
-        throw new Error("Unauthorized User");
-      }
+    deleteStory: async (_, { id }, context) => {
       try {
-        const payload = await validateToken(ctx);
+        const payload = context.user;
         const storyData = await story.findFirst({
           where: { id: parseInt(id), is_deleted: false },
         });

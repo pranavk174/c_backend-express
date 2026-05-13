@@ -9,23 +9,16 @@ type Chats {
 }
 
 type Chat {
-
-  id :ID!
-  sender_id : Int!
+  id: ID!
+  sender_id: Int!
   created_at: String!
-  seen_at : String
-  is_forwarded : Boolean!
+  seen_at: String
+  is_forwarded: Boolean!
   content: String
-  story_id : Int
-  is_edited : Boolean!
-  reply_to_message : Int
-  is_deleted : Boolean
-
-
-
-
-
-
+  story_id: Int
+  is_edited: Boolean!
+  reply_to_message: Int
+  is_deleted: Boolean
 }
 
 type SingleChat {
@@ -37,27 +30,33 @@ type AllChats {
 
 union ChatResponse = SingleChat | AllChats
 
-
-
-type chatApiResponse implements apiResponse{
+type chatApiResponse implements apiResponse {
   message: String!
   status: Int!
   success: Boolean!
   error: String
-  data : ChatResponse
+  data: ChatResponse
 }
 
-input ChatInput{
-  user_id :Int!
+input Media {
+  url: String!
+  file_name: String!
+  file_type: FileType!
+  file_size: String!
+}
+
+input ChatInput {
+  reciever_id: ID!
   chat_id: Int
-  message :String!
+  content: String
+  media: [Media!]
 }
 
- extend type Query{
-  getChatById (chat_id: ID!): chatApiResponse!
-  getAllChats:chatApiResponse!
- }
+extend type Query {
+  getChatById(chat_id: ID!): chatApiResponse! @auth
+  getAllChats: chatApiResponse! @auth
+}
 
- extend type Mutation{
-  sendMessage(input:ChatInput): chatApiResponse!
- }
+extend type Mutation {
+  sendMessage(input: ChatInput): chatApiResponse! @auth
+}

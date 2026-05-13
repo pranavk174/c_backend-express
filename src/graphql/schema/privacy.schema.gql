@@ -29,14 +29,14 @@ type PrivacyResponse implements apiResponse {
 }
 
 extend type Query {
-  getPrivacySettings: PrivacyResponse!
-  getPrivacyUsers(privacy_id: ID!): PrivacyResponse!
+  getPrivacySettings: PrivacyResponse! @auth
+  getPrivacyUsers(privacy_id: ID!): PrivacyResponse! @auth
 }
 
 extend type Mutation {
-  updatePrivacyUsers(input: PrivacyUserInput!): PrivacyResponse!
+  updatePrivacyUsers(input: PrivacyUserInput!): PrivacyResponse! @auth
   updatePrivacySettings(
     privacy_type: String!
     entity_type: String!
-  ): PrivacyResponse!
+  ): PrivacyResponse! @auth
 }

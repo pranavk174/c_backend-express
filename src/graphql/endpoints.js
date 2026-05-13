@@ -1,6 +1,6 @@
 import { createYoga, createSchema } from "graphql-yoga";
 import { readFileSync } from "fs";
-
+import { authDirectiveTransformer } from "./custom-directives/directives.js";
 import { useCookies } from "@whatwg-node/server-plugin-cookies";
 import mergedResolver from "./resolvers/merged.resolver.js";
 import {
@@ -31,14 +31,20 @@ const storySchema = readFileSync(
   "utf-8",
 );
 
-const chatResolver = readFileSync(new URL('./schema/chats.schema.gql', import.meta.url), "utf-8")
+const chatResolver = readFileSync(
+  new URL("./schema/chats.schema.gql", import.meta.url),
+  "utf-8",
+);
 
-const typeDefs = baseSchema + userSchema + storySchema + PrivacySchema + chatResolver;
+const typeDefs =
+  baseSchema + userSchema + storySchema + PrivacySchema + chatResolver;
 
-const schema = createSchema({
+let schema = createSchema({
   typeDefs,
   resolvers: mergedResolver,
 });
+
+schema = authDirectiveTransformer(schema);
 const signingKey = process.env.JWT_SECRET;
 export const yoga = createYoga({
   schema,

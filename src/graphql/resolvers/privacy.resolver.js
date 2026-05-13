@@ -1,4 +1,3 @@
-
 import prisma from "../../../prisma/prisma-client.js";
 import { validateToken } from "../../lib/tokenvalidator.js";
 
@@ -20,7 +19,7 @@ export const privacyResolvers = {
   //   },
   Query: {
     getPrivacySettings: async (_, __, ctx) => {
-      const payload = await validateToken(ctx);
+      const payload = ctx.user;
       const userId = payload.userId;
       if (!userId) {
         throw new Error("Unauthorized");
@@ -59,7 +58,7 @@ export const privacyResolvers = {
       }
     },
     getPrivacyUsers: async (_, { privacy_id }, ctx) => {
-      const payload = await validateToken(ctx);
+      const payload = ctx.user;
       const userId = payload.userId;
 
       if (!userId) {
@@ -101,7 +100,7 @@ export const privacyResolvers = {
   },
   Mutation: {
     updatePrivacySettings: async (_, { privacy_type, entity_type }, ctx) => {
-      const payload = await validateToken(ctx);
+      const payload = ctx.user;
       const userId = payload.userId;
 
       console.log(userId, payload, "payloadd.....");
@@ -157,7 +156,7 @@ export const privacyResolvers = {
       }
     },
     updatePrivacyUsers: async (_, { input: { users, privacy_id } }, ctx) => {
-      const payload = await validateToken(ctx);
+      const payload = ctx.user;
 
       const userId = payload.userId;
 

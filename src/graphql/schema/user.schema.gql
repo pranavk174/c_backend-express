@@ -67,19 +67,19 @@ input blockUserInput {
   reason: String
 }
 
-type Query {
-  getUser: userApiResponse!
+extend type Query {
+  getUser: userApiResponse! @auth
 }
 
-type Mutation {
+extend type Mutation {
   sendOtpMail(email: String!): userApiResponse!
   verifyOtp(input: verifyOtpInput): userApiResponse!
-  createUser(input: UserInput): userApiResponse!
-  updateUser(input: UpdateUserInput): userApiResponse!
+  createUser(input: UserInput): userApiResponse! @auth
+  updateUser(input: UpdateUserInput): userApiResponse! @auth
   generateRefreshToken: userApiResponse!
-  logout: userApiResponse!
-  deleteUser(action_type: AccountStatus!): userApiResponse!
-  blockUser(input: blockUserInput!): userApiResponse!
-  unBlockUser(input: blockUserInput!): userApiResponse!
+  logout: userApiResponse! @auth
+  deleteUser(action_type: AccountStatus!): userApiResponse! @auth
+  blockUser(input: blockUserInput!): userApiResponse! @auth
+  unBlockUser(input: blockUserInput!): userApiResponse! @auth
   # loginUser(email:String!):userApiResponse!
 }

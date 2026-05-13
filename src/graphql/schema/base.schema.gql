@@ -10,9 +10,18 @@ type Subscription {
   _empty: String
 }
 
+directive @auth on FIELD_DEFINITION
+
 interface apiResponse {
   message: String!
   status: Int!
   success: Boolean
   error: String
+}
+
+enum FileType {
+  IMAGE
+  VIDEO
+  AUDIO
+  DOCUMENT
 }

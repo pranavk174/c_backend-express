@@ -14,9 +14,7 @@ const userResolvers = {
   Query: {
     getUser: async (_, __, context) => {
       try {
-        console.log(context, "context dataaaa");
-        const payload = await validateToken(context);
-
+        const payload = context.user;
         const data = await prisma.users.findFirst({
           where: {
             email: payload.email,
@@ -28,7 +26,7 @@ const userResolvers = {
         }
 
         return {
-          message: "success fully retuireived",
+          message: "successfully retrived",
           status: 200,
           data,
           success: true,
@@ -147,6 +145,26 @@ const userResolvers = {
       context,
     ) => {
       const { response } = context;
+
+      if (
+        !email ||
+        !otp ||
+        !device_id ||
+        !ip_address ||
+        !location ||
+        !device_name
+      ) {
+        throw new Error("Data is missing");
+      }
+      console.log(
+        email,
+        otp,
+        device_id,
+        ip_address,
+        location,
+        device_name,
+        "device meta data...",
+      );
       try {
         const user = await prisma.users.findFirst({
           where: { email },
@@ -195,13 +213,13 @@ const userResolvers = {
           await prisma.otp.delete({ where: { email } });
 
           const accessToken = jwt.sign(
-            { userId: user.id, device_id },
+            { userId: user.id, device_id: device_id, email: email },
             process.env.JWT_SECRET,
             { expiresIn: "15m" },
           );
 
           const refreshToken = jwt.sign(
-            { userId: user.id, device_id },
+            { userId: user.id, device_id: device_id, email: email },
 
             process.env.REFRESH_SECRET,
             { expiresIn: "7d" },
@@ -438,11 +456,8 @@ const userResolvers = {
         };
       }
     },
-    updateUser: async (_, { input }, ctx) => {
-      const payload = await validateToken(ctx)
-      if (!payload.userId) {
-        throw new Error("Unauthorized User");
-      }
+    updateUser: async (_, { input }, context) => {
+      const payload = context.user;
       const updateData = {};
 
       for (const key in input) {
@@ -460,7 +475,7 @@ const userResolvers = {
       }
 
       try {
-        const payload = await validateToken(ctx);
+        const payload = context.user;
         const updated = await prisma.users.update({
           where: {
             id: payload.userId,
@@ -485,13 +500,9 @@ const userResolvers = {
         };
       }
     },
-    deleteUser: async (_, { action_type }, ctx) => {
-
+    deleteUser: async (_, { action_type }, context) => {
       try {
-        const payload = await validateToken(ctx);
-        if (!payload.userId) {
-          throw new Error("Unauthorized User");
-        }
+        const payload = context.user;
 
         const exists = await prisma.users.findFirst({
           where: {
@@ -553,10 +564,10 @@ const userResolvers = {
           throw new Error();
         }
 
-        await ctx.request.cookieStore?.delete("accessToken", {
+        await context.request.cookieStore?.delete("accessToken", {
           path: "/",
         });
-        await ctx.request.cookieStore?.delete("refreshToken", {
+        await context.request.cookieStore?.delete("refreshToken", {
           path: "/",
         });
         return {
@@ -565,7 +576,7 @@ const userResolvers = {
           success: true,
         };
 
-        // await ctx.request.cookieStore?.delete("accessToken", {
+        // await context.request.cookieStore?.delete("accessToken", {
       } catch (err) {
         console.log(err.message, "errror");
         return {
@@ -576,18 +587,20 @@ const userResolvers = {
         };
       }
     },
-    generateRefreshToken: async (_, __, ctx) => {
+    generateRefreshToken: async (_, __, context) => {
       try {
-        const cookie = await ctx.request.cookieStore?.get("refreshToken");
+        const cookie = await context.request.cookieStore?.get("refreshToken");
         if (!cookie) throw new Error("No refresh token");
 
         const refreshToken = cookie.value;
-
+        console.log(refreshToken);
         let payload;
+
         try {
           payload = jwt.verify(refreshToken, process.env.REFRESH_SECRET);
         } catch (err) {
-          throw new Error("Invalid refresh token");
+          console.log(err, "error in token....");
+          throw new Error("Invalid refresh token============");
         }
 
         const device = await prisma.devices.findFirst({
@@ -601,12 +614,16 @@ const userResolvers = {
 
         // 🔁 new access token generate
         const newAccessToken = jwt.sign(
-          { userId: payload.userId },
+          {
+            userId: payload.userId,
+            device_id: payload.device_id,
+            email: payload.email,
+          },
           process.env.JWT_SECRET,
           { expiresIn: "15m" },
         );
 
-        await ctx.request.cookieStore?.set("accessToken", newAccessToken, {
+        await context.request.cookieStore?.set("accessToken", newAccessToken, {
           httpOnly: true,
           path: "/",
           maxAge: 900,
@@ -629,7 +646,8 @@ const userResolvers = {
     },
     logout: async (_, __, context) => {
       try {
-        const payload = await validateToken(context);
+        const payload = context.user;
+        console.log(payload, "payloadddddd");
 
         const loggedout = await prisma.devices.update({
           where: {
@@ -667,12 +685,8 @@ const userResolvers = {
         };
       }
     },
-    blockUser: async (_, { input: { blocked_user_id, reason } }, ctx) => {
-
-      const payload = await validateToken(context);
-      if (!payload.userId) {
-        throw new Error("Unauthorized User");
-      }
+    blockUser: async (_, { input: { blocked_user_id, reason } }, context) => {
+      const payload = context.user;
 
       if (!reason || reason.trim() === "" || !blocked_user_id) {
         return {
@@ -682,7 +696,6 @@ const userResolvers = {
         };
       }
       try {
-
         const exists = await prisma.users.findFirst({
           where: {
             id: blocked_user_id,
@@ -750,11 +763,9 @@ const userResolvers = {
         };
       }
     },
-    unBlockUser: async (_, { input: { blocked_user_id } }, ctx) => {
-      const payload = await validateToken(ctx);
-      if (!payload.userId) {
-        throw new Error("Unauthorized User");
-      }
+    unBlockUser: async (_, { input: { blocked_user_id } }, context) => {
+      const payload = context.user;
+
       if (!blocked_user_id) {
         return {
           message: "User ID is missing",
@@ -763,7 +774,6 @@ const userResolvers = {
         };
       }
       try {
-
         const exists = await prisma.users.findFirst({
           where: {
             id: blocked_user_id,

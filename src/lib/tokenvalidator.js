@@ -11,8 +11,10 @@ export const validateToken = async (context) => {
 
     const accessToken = cookie.value;
     payload = jwt.verify(accessToken, process.env.JWT_SECRET);
+
+    console.log(payload, "paylod aaaaaaaaaaaa");
   } catch (err) {
-    console.log(err, "errrrr");
+    console.log(err, "errrrrrrrrr");
     throw new Error("Invalid refresh token");
   }
 

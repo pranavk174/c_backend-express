@@ -54,15 +54,15 @@ input ForwardStoryInput {
 }
 
 extend type Query {
-  getStoryById(id: ID!): storyApiResponse!
-  getAllStories: storyApiResponse!
+  getStoryById(id: ID!): storyApiResponse! @auth
+  getAllStories: storyApiResponse! @auth
 }
 
 extend type Mutation {
-  createStory(input: createStoryInput!): storyApiResponse!
-  deleteStory(id: ID!): storyApiResponse!
-  replyToStory(id: ID!, content: String!): storyApiResponse!
-  seenStory(id: ID!): storyApiResponse!
-  likeStory(input: storyLikeInput!): storyApiResponse!
-  forwardStory(input: ForwardStoryInput!): storyApiResponse!
+  createStory(input: createStoryInput!): storyApiResponse! @auth
+  deleteStory(id: ID!): storyApiResponse! @auth
+  replyToStory(id: ID!, content: String!): storyApiResponse! @auth
+  seenStory(id: ID!): storyApiResponse! @auth
+  likeStory(input: storyLikeInput!): storyApiResponse! @auth
+  forwardStory(input: ForwardStoryInput!): storyApiResponse! @auth
 }
