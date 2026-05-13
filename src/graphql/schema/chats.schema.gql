@@ -46,8 +46,9 @@ input Media {
 }
 
 input ChatInput {
-  reciever_id: ID!
+  reciever_id: ID
   chat_id: Int
+  message_id:ID
   content: String
   media: [Media!]
 }
@@ -59,4 +60,7 @@ extend type Query {
 
 extend type Mutation {
   sendMessage(input: ChatInput): chatApiResponse! @auth
+  editMessage(input:ChatInput):chatApiResponse! @auth
+  deleteMessage(message_id:ID!) :chatApiResponse! @auth
+replyMessage(input:ChatInput!):chatApiResponse! @auth
 }

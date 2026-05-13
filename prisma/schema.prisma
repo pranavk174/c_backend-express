@@ -352,6 +352,14 @@ enum file_type_enum {
   video
   audio
   file
+  IMAGE
+  Image
+  Video
+  VIDEO
+  File
+  FILE
+  Audio
+  AUDIO
 }
 
 enum notification_type_enum {

@@ -21,7 +21,18 @@ interface apiResponse {
 
 enum FileType {
   IMAGE
+  Image
+  image
+
   VIDEO
+  Video
+  video
+
   AUDIO
-  DOCUMENT
+  Audio
+  audio
+
+  FILE
+  File
+  file
 }

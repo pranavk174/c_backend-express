@@ -22,11 +22,24 @@ const chatResolver = {
       try {
         const chats = await prisma.$queryRaw`
       SELECT 
-   m.* ,
+      m.id,
+    
+    CASE 
+        WHEN m.is_deleted = true THEN 'Deleted message'
+        ELSE m.content
+    END AS content,
+
+    m.chat_id,
+    m.sender_id,
+    m.created_at,
+    m.is_forwarded,
+    m.is_edited,
+    m.is_deleted,
+    m.reply_to_message_id as reply_to_message,
     sm.user_id as seen_users
 FROM message m
 LEFT JOIN seen_message sm 
-ON m.id = sm.message_id
+ON m.id = sm.message_id 
 WHERE m.chat_id = ${chat_id};
         `;
 
@@ -45,11 +58,12 @@ WHERE m.chat_id = ${chat_id};
           },
         };
       } catch (err) {
+        console.log(err)
         return {
           message: "Something went wrong",
           status: 500,
           success: false,
-          errr: err.message,
+          error: err.message,
         };
       }
     },
@@ -60,7 +74,7 @@ WHERE m.chat_id = ${chat_id};
         const chats = await prisma.$queryRaw`
 
 SELECT 
-    c.id AS chat_id,
+  distinct  (c.id) AS chat_id,
     c.chat_type,
 
     u.id AS user_id,
@@ -68,8 +82,13 @@ SELECT
     u.profile_pic,
 
     m.id AS last_message_id,
-    m.content AS last_message,
+      CASE 
+        WHEN m.content IS NULL THEN a.file_type :: text
+        ELSE m.content
+    END AS last_message,
     m.created_at AS last_message_at
+
+
 
 FROM chat c
 
@@ -83,9 +102,13 @@ LEFT JOIN LATERAL (
     SELECT *
     FROM message
     WHERE message.chat_id = c.id
+    AND is_deleted = false
     ORDER BY created_at DESC
     LIMIT 1
 ) m ON true
+
+LEFT JOIN attachment a
+    ON a.message_id = m.id AND m.content IS NULL
 
 WHERE c.id IN (
     SELECT chat_id
@@ -95,7 +118,7 @@ WHERE c.id IN (
 
 AND u.id != ${payload.userId}
 
-ORDER BY m.created_at DESC NULLS LAST;
+ORDER BY m.created_at DESC NULLS LAST; 
 
 `;
 
@@ -133,7 +156,7 @@ ORDER BY m.created_at DESC NULLS LAST;
 
       let chatId = chat_id;
 
-      if ((!content && !media) || !reciever_id) {
+      if ((!content && !media) || (!chat_id && !reciever_id)) {
         return {
           message: "Data is missing...",
           status: 400,
@@ -217,6 +240,178 @@ ORDER BY m.created_at DESC NULLS LAST;
         };
       }
     },
+    editMessage: async (_, { input: { message_id, content } }, ctx) => {
+
+      const payload = ctx.user
+
+      if (!message_id || !content) {
+        return {
+          message: "Data is missing", success: false, status: 400
+        }
+      }
+      try {
+
+        const messageData = await prisma.$queryRaw`
+        
+        select id,content from message where id = ${message_id} and is_deleted = false limit 1
+        
+        `
+
+        console.log(messageData, "message dataaa.")
+
+        if (messageData.length < 1) {
+          throw new Error("This message does not exist or has been deleted")
+        }
+
+        const [editMessage, updateMessage] = await Promise.all(
+          [prisma.$queryRaw`
+
+          insert into edit_message (message_id ,content ,old_content) values(${message_id},${content},${messageData[0].content})
+
+          `,
+          prisma.$queryRaw`
+
+UPDATE message
+SET 
+    content = ${content},
+    is_edited = true
+WHERE id = ${message_id}
+
+`
+          ])
+
+
+        if (!editMessage || !updateMessage) {
+          throw new Error("Error in Updating")
+        }
+
+        return {
+          message: "Message Edited successfully",
+          status: 201,
+          success: true,
+        };
+
+
+
+
+
+
+
+      } catch (err) {
+        return {
+          message: "Something went Wrong",
+          status: 500,
+          success: false,
+          error: err.message
+        };
+      }
+    },
+    deleteMessage: async (_, { message_id }, ctx) => {
+
+      const payload = ctx.user
+
+      if (!message_id) {
+
+        return {
+          message: "Message Id is Missing", status: 400, success: false
+        }
+      }
+
+      try {
+
+        const messageData = await prisma.$queryRaw`
+        
+        select id from message where id = ${message_id}`
+
+
+        if (messageData.length < 1) {
+          throw new Error("This Message doest not Exists or  is Already deleted")
+        }
+
+        const deleted = await prisma.$queryRaw`
+        
+
+        update message set is_deleted = true 
+        where id = ${message_id} ;
+
+        `
+
+
+        if (!deleted) {
+          throw new Error("Message not deleted..")
+        }
+
+
+
+
+
+      } catch (error) {
+        return {
+          message: "Something went Wrong",
+          status: 500,
+          success: false,
+          error: error.message
+        };
+      }
+    },
+    replyMessage: async (_, { input: { message_id, content, media } }, ctx) => {
+
+      const payload = ctx.user
+
+      if (!message_id || (!content && !media)) {
+        return {
+          message: "Data is Missing",
+          status: 400,
+          success: false
+        }
+      }
+
+
+      try {
+
+        const messageData = await prisma.$queryRaw`
+        
+        select chat_id,id from message where id = ${message_id} and is_deleted = false
+        `
+
+
+
+        if (messageData.length < 1) {
+          throw new Error("Message not Found")
+        }
+
+
+
+        const updated = await prisma.$queryRaw`
+        insert into message (content,sender_id, reply_to_message_id ,chat_id) values(${content},${payload.userId},${message_id} , ${messageData[0].chat_id})
+        
+        `
+
+
+
+        if (!updated) {
+          throw new Error("Message  reply Failed")
+        }
+
+        return {
+          message: "Message Replied successfully",
+          status: 201,
+          success: true,
+        };
+
+
+      } catch (error) {
+        return {
+          message: "Something went Wrong",
+          status: 500,
+          success: false,
+          error: error.message
+        };
+      }
+    }
+
+
+
   },
 };
 
