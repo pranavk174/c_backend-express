@@ -239,6 +239,7 @@ const userResolvers = {
               last_login: new Date(),
               expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
             },
+
             create: {
               user_id: user.id,
               device_id,

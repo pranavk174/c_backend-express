@@ -1,6 +1,9 @@
 import { createYoga, createSchema } from "graphql-yoga";
 import { readFileSync } from "fs";
-import { authDirectiveTransformer } from "./custom-directives/directives.js";
+import {
+  authDirectiveTransformer,
+  isChatMemberDirective,
+} from "./custom-directives/directives.js";
 import { useCookies } from "@whatwg-node/server-plugin-cookies";
 import mergedResolver from "./resolvers/merged.resolver.js";
 import {
@@ -44,7 +47,9 @@ let schema = createSchema({
   resolvers: mergedResolver,
 });
 
+schema = isChatMemberDirective(schema);
 schema = authDirectiveTransformer(schema);
+
 const signingKey = process.env.JWT_SECRET;
 export const yoga = createYoga({
   schema,

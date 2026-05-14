@@ -1,21 +1,21 @@
 input createStoryInput {
-  text_data: String!
-  content: String!
+  text_data: String
+  content: String
+  message_ids: [ID!]
 }
 
 type Story {
   id: ID!
-  text_data: String!
-  content: String!
+  user_id: ID!
+  text_data: String
+  content: String
   created_at: String!
   updated_at: String!
   expires_at: String!
 }
 
 type StoryData {
-  id: ID!
-  text_data: String!
-  content: String!
+  story: Story
 }
 
 input storyLikeInput {
@@ -25,10 +25,10 @@ input storyLikeInput {
 }
 
 type StoriesData {
-  stories: [StoryData!]!
+  stories: [Story!]!
 }
 
-union storyResponseData = StoryData | StoriesData
+union storyResponseData = StoriesData | StoryData
 
 type storyApiResponse implements apiResponse {
   message: String!

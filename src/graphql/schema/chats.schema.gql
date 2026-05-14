@@ -1,3 +1,4 @@
+directive @isChatMember on FIELD_DEFINITION
 type Chats {
   chat_id: String!
   user_id: ID!
@@ -46,21 +47,24 @@ input Media {
 }
 
 input ChatInput {
-  reciever_id: ID
-  chat_id: Int
-  message_id:ID
+  reciever_ids: [ID!]
+  chat_ids: [Int!]
+  message_ids: [ID!]
   content: String
+  reaction_id: Int
   media: [Media!]
 }
 
 extend type Query {
-  getChatById(chat_id: ID!): chatApiResponse! @auth
-  getAllChats: chatApiResponse! @auth
+  getChatById(chat_id: ID!): chatApiResponse! @auth @isChatMember
+  getAllChats: chatApiResponse! @auth @isChatMember
 }
 
 extend type Mutation {
   sendMessage(input: ChatInput): chatApiResponse! @auth
-  editMessage(input:ChatInput):chatApiResponse! @auth
-  deleteMessage(message_id:ID!) :chatApiResponse! @auth
-replyMessage(input:ChatInput!):chatApiResponse! @auth
+  editMessage(input: ChatInput): chatApiResponse! @auth @isChatMember
+  deleteMessage(message_ids: [ID!]!): chatApiResponse! @auth @isChatMember
+  replyMessage(input: ChatInput!): chatApiResponse! @auth @isChatMember
+  reactMessage(input: ChatInput!): chatApiResponse! @auth @isChatMember
+  forwardMessage(input: ChatInput!): chatApiResponse! @auth @isChatMember
 }

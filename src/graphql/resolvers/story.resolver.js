@@ -102,7 +102,7 @@ GROUP BY s.id;
 
             SELECT 1
 
-            FROM blocked_users bu
+            FROM block bu
 
             WHERE
 
@@ -146,9 +146,9 @@ GROUP BY s.id;
 
                 ps.user_id = s.user_id
 
-                AND ps.entity_type = 'STORY'
+                AND ps.entity_type :: text = 'STORY'
 
-                AND ps.privacy_type = 'PUBLIC'
+                AND ps.privacy_type ::text = 'PUBLIC'
 
             )
 
@@ -166,9 +166,9 @@ GROUP BY s.id;
 
                 ps.user_id = s.user_id
 
-                AND ps.entity_type = 'STORY'
+                AND ps.entity_type :: text = 'STORY'
 
-                AND ps.privacy_type = 'ONLY_ME'
+                AND ps.privacy_type  :: text = 'ONLY_ME'
 
                 AND s.user_id = ${payload.userId}
 
@@ -191,9 +191,9 @@ GROUP BY s.id;
 
                 ps.user_id = s.user_id
 
-                AND ps.entity_type = 'STORY'
+                AND ps.entity_type  :: text = 'STORY'
 
-                AND ps.privacy_type = 'CUSTOM'
+                AND ps.privacy_type  :: text = 'CUSTOM'
 
                 AND pu.target_user_id = ${payload.userId}
 
@@ -215,9 +215,9 @@ GROUP BY s.id;
 
                     ps.user_id = s.user_id
 
-                    AND ps.entity_type = 'STORY'
+                    AND ps.entity_type  :: text = 'STORY'
 
-                    AND ps.privacy_type = 'EXCEPT_USERS'
+                    AND ps.privacy_type  :: text = 'EXCEPT_USERS'
 
                 )
 
@@ -234,9 +234,9 @@ GROUP BY s.id;
 
                     ps.user_id = s.user_id
 
-                    AND ps.entity_type = 'STORY'
+                    AND ps.entity_type  :: text = 'STORY'
 
-                    AND ps.privacy_type = 'EXCEPT_USERS'
+                    AND ps.privacy_type  :: text = 'EXCEPT_USERS'
 
                     AND pu.target_user_id = ${payload.userId}
 
@@ -271,8 +271,12 @@ GROUP BY s.id;
     },
   },
   Mutation: {
-    createStory: async (_, { input: { content, text_data } }, context) => {
-      if (!content || content.trim() === "") {
+    createStory: async (
+      _,
+      { input: { content, text_data, message_ids = [] } },
+      context,
+    ) => {
+      if ((!content || content.trim() === "") && message_ids.length === 0) {
         return {
           message: "Content is required",
           status: 400,
@@ -281,19 +285,42 @@ GROUP BY s.id;
       try {
         const payload = context.user;
 
-        const storyData = await story.create({
-          data: {
-            content,
-            text_data,
-            user_id: payload.userId,
-            expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours ke liye valid
-          },
-        });
+        if (message_ids.length > 0) {
+          const media = await prisma.$queryRaw`
+          
+          select * from attachment where message_id = ANY(${message_ids})
+          
+          `;
+
+          const data = await prisma.story.createMany({
+            data: media.map((m) => {
+              return {
+                content: m.url,
+                text_data,
+                user_id: payload.userId,
+
+                expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000),
+              };
+            }),
+          });
+        } else {
+          const storyData = await story.create({
+            data: {
+              content,
+              text_data,
+              user_id: payload.userId,
+              expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours ke liye valid
+            },
+          });
+
+          if (!storyData) {
+            throw new Error("Story Creation Failed");
+          }
+        }
         return {
           message: "Story created successfully",
           status: 201,
           success: true,
-          data: storyData,
         };
       } catch (error) {
         return {
