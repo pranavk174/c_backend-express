@@ -7,11 +7,12 @@ import jwt from "jsonwebtoken";
 const userResolvers = {
   ResponseData: {
     __resolveType(obj) {
-      if (obj.email && obj.is_verified) {
+      console.log(obj, "object dataaa");
+      if (obj._responseType === "verifyOtpData") {
         return "verifyOtpData";
       }
 
-      if (obj.username) {
+      if (obj._responseType === "User") {
         return "User";
       }
 
@@ -264,15 +265,8 @@ const userResolvers = {
           // });
 
           console.log({
-            device_id: device_id.length,
-            device_name: device_name.length,
-            ip_address: ip_address.length,
-            location: location.length,
-            refreshToken: refreshToken.length,
+            user,
           });
-          console.log(device_id);
-          console.log(typeof device_id);
-          console.log(device_id.length);
 
           const addToken = await prisma.$queryRaw`
   INSERT INTO devices (
@@ -322,7 +316,10 @@ const userResolvers = {
             message: "Login Successful",
             status: 200,
             success: true,
-            user,
+            data: {
+              _responseType: "User",
+              ...user,
+            },
           };
         }
 
