@@ -21,9 +21,7 @@ export const privacyResolvers = {
     getPrivacySettings: async (_, __, ctx) => {
       const payload = ctx.user;
       const userId = payload.userId;
-      if (!userId) {
-        throw new Error("Unauthorized");
-      }
+
       try {
         const settings = await privacy_settings.findMany({
           where: {
@@ -61,9 +59,6 @@ export const privacyResolvers = {
       const payload = ctx.user;
       const userId = payload.userId;
 
-      if (!userId) {
-        throw new Error("Unauthorized");
-      }
       try {
         const privacyUsers = await prisma.$queryRaw`
                                 select u.id,u.name
@@ -103,10 +98,6 @@ export const privacyResolvers = {
       const payload = ctx.user;
       const userId = payload.userId;
 
-      console.log(userId, payload, "payloadd.....");
-      if (!userId) {
-        throw new Error("Unauthorized");
-      }
       if (!privacy_type || !entity_type) {
         return {
           message: "privacy_type and entity_type are required",

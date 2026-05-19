@@ -1,7 +1,7 @@
 export const checkMessageExists = async (prisma, message_ids) => {
   const data = await prisma.$queryRaw`
 
-    SELECT id,chat_id
+    SELECT id,chat_id,sender_id,is_deleted
     FROM message
 
     WHERE id = ANY(${message_ids})

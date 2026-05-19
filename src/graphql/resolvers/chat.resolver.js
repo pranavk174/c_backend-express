@@ -9,11 +9,20 @@ import {
 const chatResolver = {
   ChatResponse: {
     __resolveType(obj) {
+      // console.log(obj, "object dataaa");
+      if (obj._responseType === "Emojis") {
+        return "Emojis";
+      } else if (obj._responseType === "SingleChat") {
+        return "SingleChat";
+      } else if (obj._responseType === "AllChats") {
+        return "AllChats";
+      }
+
       return obj._responseType;
     },
   },
   Query: {
-    getChatById: async (_, { chat_ids }, ctx) => {
+    getChatById: async (_, { input: { chat_ids } }, ctx) => {
       const payload = ctx.user;
 
       if (chat_ids.length < 1) {
@@ -33,7 +42,9 @@ const chatResolver = {
     
     CASE 
         WHEN m.is_deleted = true THEN 'Deleted message'
+        when m.id = md.message_id  Then 'Deleted message'
         ELSE m.content
+      
     END AS content,
 
     m.chat_id,
@@ -43,14 +54,44 @@ const chatResolver = {
     m.is_edited,
     m.is_deleted,
     m.reply_to_message_id as reply_to_message,
-    sm.user_id as seen_users
+    sm.user_id as seen_users,
+  COALESCE(r.reactions, '[]'::json) as reactions
 FROM message m
 LEFT JOIN seen_message sm 
+
 ON m.id = sm.message_id 
+
+left join message_delete_for_me  md
+on m.id = md.message_id
+
+
+LEFT JOIN LATERAL (
+
+    SELECT json_agg(
+        json_build_object(
+            'react_id', mr.reaction_id,
+
+            'user_id', ru.id
+
+
+        )
+    ) as reactions
+
+    FROM message_reaction mr
+
+    JOIN users ru
+        ON ru.id = mr.user_id
+
+    WHERE mr.message_id = m.id
+
+) r ON true
+
+
 WHERE m.chat_id = ${chat_id};
         `;
 
-        console.log(chats, "chat dataaa....");
+        // console.dir(chats, { depth: null });
+        console.log(JSON.stringify(chats, null, 2));
 
         if (!chats) {
           throw new Error();
@@ -80,8 +121,9 @@ WHERE m.chat_id = ${chat_id};
       try {
         const chats = await prisma.$queryRaw`
 
-SELECT 
-  distinct  (c.id) AS chat_id,
+SELECT DISTINCT ON (c.id)
+
+    c.id AS chat_id,
     c.chat_type,
 
     u.id AS user_id,
@@ -89,13 +131,18 @@ SELECT
     u.profile_pic,
 
     m.id AS last_message_id,
-      CASE 
-        WHEN m.content IS NULL THEN a.file_type :: text
+
+    CASE 
+        WHEN m.is_deleted = true 
+        THEN 'Deleted message'
+
+        WHEN m.content IS NULL 
+        THEN a.file_type::text
+        
         ELSE m.content
     END AS last_message,
+
     m.created_at AS last_message_at
-
-
 
 FROM chat c
 
@@ -106,16 +153,27 @@ JOIN users u
     ON u.id = cm.member_id
 
 LEFT JOIN LATERAL (
+
     SELECT *
-    FROM message
+    FROM message message
+
     WHERE message.chat_id = c.id
-    AND is_deleted = false
-    ORDER BY created_at DESC
+
+    AND NOT EXISTS (
+        SELECT 1
+        FROM message_delete_for_me md
+        WHERE md.message_id = message.id
+        AND md.user_id = ${payload.userId}
+    )
+
+    ORDER BY message.created_at DESC
     LIMIT 1
+
 ) m ON true
 
 LEFT JOIN attachment a
-    ON a.message_id = m.id AND m.content IS NULL
+    ON a.message_id = m.id
+    AND m.content IS NULL
 
 WHERE c.id IN (
     SELECT chat_id
@@ -125,7 +183,7 @@ WHERE c.id IN (
 
 AND u.id != ${payload.userId}
 
-ORDER BY m.created_at DESC NULLS LAST; 
+ORDER BY c.id, m.created_at DESC NULLS LAST;
 
 `;
 
@@ -149,6 +207,34 @@ ORDER BY m.created_at DESC NULLS LAST;
           status: 500,
           error: error.message,
           success: false,
+        };
+      }
+    },
+    getEmojis: async (_, __, ctx) => {
+      try {
+        const data = await prisma.$queryRaw`
+        
+        select react_id , emoji from reaction
+        
+        `;
+
+        console.log(data, "dataaaaaa");
+
+        return {
+          message: "Data get Successs",
+          success: true,
+          data: {
+            _responseType: "Emojis",
+            items: data,
+          },
+          status: 200,
+        };
+      } catch (err) {
+        return {
+          message: "Something went Wrong",
+          status: 500,
+          success: false,
+          error: err.message,
         };
       }
     },
@@ -340,12 +426,12 @@ WHERE id = ${message_id}
         };
       }
     },
-    deleteMessage: async (_, { message_ids }, ctx) => {
+    deleteMessage: async (_, { input: { message_ids, delete_type } }, ctx) => {
       const payload = ctx.user;
 
-      if (!message_ids.length > 0) {
+      if (!message_ids.length > 0 || !delete_type) {
         return {
-          message: "Message Id is Missing",
+          message: "Data is Missing",
           status: 400,
           success: false,
         };
@@ -364,18 +450,48 @@ WHERE id = ${message_id}
         //   );
         // }
 
-        const deleted = await prisma.$queryRaw`
+        console.log(messageData, "message dataaaa..._..");
+
+        if (delete_type === "onlyme") {
+          const updated = await Promise.all(
+            message_ids.map(
+              (id) => prisma.$queryRaw`
+              
+                 insert into message_delete_for_me (
+            message_id, user_id
+          ) values(${id} , ${payload.userId} )
+              
+              `,
+            ),
+          );
+
+          if (!updated) {
+            throw new Error("Message Deletion Failed");
+          }
+        } else if (delete_type === "everyone") {
+          const verify = messageData.map((m) => {
+            if (m.sender_id != payload.userId) {
+              throw new Error(
+                "You can only delete  the messages which you have sent!",
+              );
+            }
+          });
+
+          const deleted = await prisma.$queryRaw`
         
 
         update message set is_deleted = true 
-        where id = ANY(${message_ids}) ;
+        where id = ANY(${message_ids}) and sender_id = ${payload.userId} ;
 
         `;
 
-        console.log(deleted, "deleetddddd");
+          console.log(deleted, "deleetddddd");
 
-        if (!deleted) {
-          throw new Error("Message not deleted..");
+          if (!deleted) {
+            throw new Error("Message not deleted..");
+          }
+        } else {
+          throw new Error("Delete type is Invalid");
         }
         return {
           message: "Message Deleted successfully",
@@ -398,7 +514,7 @@ WHERE id = ${message_id}
     ) => {
       const payload = ctx.user;
 
-      if (!message_ids.length > 0 || (!content && !media)) {
+      if (message_ids.length !== 1 || (!content && !media)) {
         return {
           message: "Data is Missing",
           status: 400,
@@ -426,7 +542,7 @@ WHERE id = ${message_id}
         `;
 
         if (!updated) {
-          throw new Error("Message  reply Failed");
+          throw new Error("Message reply Failed");
         }
 
         return {
@@ -518,7 +634,6 @@ SET
         };
       }
     },
-
     // very complex logic......
     forwardMessage: async (
       _,
@@ -748,6 +863,45 @@ SET
           success: true,
         };
       } catch (error) {
+        return {
+          message: "Something went wrong",
+          status: 500,
+          success: false,
+          error: error.message,
+        };
+      }
+    },
+    seenMessage: async (_, { input: { message_ids, chat_ids } }, ctx) => {
+      const payload = ctx.user;
+
+      if (message_ids.length < 1) {
+        return {
+          message: "Message id is Missing",
+          status: 400,
+          success: false,
+        };
+      }
+
+      try {
+        const messageData = await checkMessageExists(prisma, message_ids);
+
+        const seen = await prisma.seen_message.createMany({
+          data: message_ids.map((m) => ({
+            message_id: parseInt(m),
+            user_id: 2,
+          })),
+        });
+
+        if (!seen) {
+          throw new Error("Error in message seen");
+        }
+        return {
+          message: "Successfully Seen message",
+          status: 201,
+          success: true,
+        };
+      } catch (error) {
+        console.log(error, "error ");
         return {
           message: "Something went wrong",
           status: 500,

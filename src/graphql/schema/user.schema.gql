@@ -33,11 +33,12 @@ input UpdateUserInput {
   profile_pic: String
 }
 
-type data {
+type verifyOtpData {
   email: String!
   id: Int!
+  is_verified: Boolean
 }
-union ResponseData = User | data
+union ResponseData = User | verifyOtpData
 type userApiResponse implements apiResponse {
   message: String!
   status: Int!

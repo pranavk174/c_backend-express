@@ -1,4 +1,13 @@
 directive @isChatMember on FIELD_DEFINITION
+
+enum delete_type {
+  onlyme
+  ONLYME
+  OnlyMe
+  Everyone
+  everyone
+  EVERYONE
+}
 type Chats {
   chat_id: String!
   user_id: ID!
@@ -7,6 +16,20 @@ type Chats {
   last_message_at: String
   name: String!
   chat_type: String!
+}
+
+type emoji {
+  react_id: Int!
+  emoji: String!
+}
+
+type Emojis {
+  items: [emoji]!
+}
+
+type reaction {
+  react_id: Int!
+  user_id: Int!
 }
 
 type Chat {
@@ -20,7 +43,12 @@ type Chat {
   is_edited: Boolean!
   reply_to_message: Int
   is_deleted: Boolean
+  reactions: [reaction]!
 }
+
+# type reactions {
+#   items: [reaction]!
+# }
 
 type SingleChat {
   items: [Chat]
@@ -29,7 +57,7 @@ type AllChats {
   items: [Chats]
 }
 
-union ChatResponse = SingleChat | AllChats
+union ChatResponse = SingleChat | AllChats | Emojis
 
 type chatApiResponse implements apiResponse {
   message: String!
@@ -50,21 +78,24 @@ input ChatInput {
   reciever_ids: [ID!]
   chat_ids: [Int!]
   message_ids: [ID!]
+  delete_type: delete_type
   content: String
   reaction_id: Int
   media: [Media!]
 }
 
 extend type Query {
-  getChatById(chat_id: ID!): chatApiResponse! @auth @isChatMember
-  getAllChats: chatApiResponse! @auth @isChatMember
+  getChatById(input: ChatInput!): chatApiResponse! @auth @isChatMember
+  getAllChats: chatApiResponse! @auth
+  getEmojis: chatApiResponse!
 }
 
 extend type Mutation {
-  sendMessage(input: ChatInput): chatApiResponse! @auth
-  editMessage(input: ChatInput): chatApiResponse! @auth @isChatMember
-  deleteMessage(message_ids: [ID!]!): chatApiResponse! @auth @isChatMember
+  sendMessage(input: ChatInput!): chatApiResponse! @auth
+  editMessage(input: ChatInput!): chatApiResponse! @auth @isChatMember
+  deleteMessage(input: ChatInput!): chatApiResponse! @auth @isChatMember
   replyMessage(input: ChatInput!): chatApiResponse! @auth @isChatMember
   reactMessage(input: ChatInput!): chatApiResponse! @auth @isChatMember
   forwardMessage(input: ChatInput!): chatApiResponse! @auth @isChatMember
+  seenMessage(input: ChatInput!): chatApiResponse! @auth @isChatMember
 }

@@ -15,15 +15,16 @@ const mergedResolvers = {
     ...privacyResolvers.Mutation,
     ...chatResolver.Mutation,
   },
-  ResponseData: {
-    __resolveType(obj) {
-      if (obj.fname || obj.user_name || obj.mobile) return "User";
-      if (obj.content) return "Story";
-      return null;
-    },
-  },
+  // ResponseData: {
+  //   __resolveType(obj) {
+  //     if (obj.fname || obj.user_name || obj.mobile) return "User";
+  //     if (obj.content) return "Story";
+  //     return null;
+  //   },
+  // },
+  ResponseData: userResolver.ResponseData,
   storyResponseData: Storyresolver.storyResponseData,
-  ChatResponse: chatResolver.ChatResponse
+  ChatResponse: chatResolver.ChatResponse,
 };
 
 export default mergedResolvers;

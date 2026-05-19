@@ -2,13 +2,20 @@ import prisma from "../../../prisma/prisma-client.js";
 import { sendMail } from "../../utils/nodemainler.js";
 import bcrypt from "bcrypt";
 import { validateToken } from "../../lib/tokenvalidator.js";
-
+import { GraphQLError } from "graphql";
 import jwt from "jsonwebtoken";
 const userResolvers = {
   ResponseData: {
     __resolveType(obj) {
-      if (obj.fname || obj.user_name || obj.mobile) return "User";
-      return "data";
+      if (obj.email && obj.is_verified) {
+        return "verifyOtpData";
+      }
+
+      if (obj.username) {
+        return "User";
+      }
+
+      return null;
     },
   },
   Query: {
@@ -191,7 +198,7 @@ const userResolvers = {
 
           const isExpired = new Date(record.expires_at) < new Date();
           if (isExpired) {
-            return { message: "OTP Expired", status: 400, success: false };
+            throw new Error("Expired Otp");
           }
 
           // console.log(
@@ -206,7 +213,8 @@ const userResolvers = {
 
           const isMatch = await bcrypt.compare(String(otp), record.otp);
           if (!isMatch) {
-            return { message: "Invalid OTP", status: 400, success: false };
+            // return { message: "Invalid OTP", status: 400, success: false };
+            throw new Error("Invalid Otp");
           }
 
           // cleanup
@@ -225,33 +233,79 @@ const userResolvers = {
             { expiresIn: "7d" },
           );
 
-          const addToken = await prisma.devices.upsert({
-            where: {
-              user_id_device_id: {
-                user_id: user.id,
-                device_id,
-              },
-            },
-            update: {
-              ip_address,
-              location,
-              refresh_token: refreshToken,
-              last_login: new Date(),
-              expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-            },
+          // const refreshToken = "hwelfjhsjsdlkfjkdfjldsjlksfjkdsfjldsla";
 
-            create: {
-              user_id: user.id,
-              device_id,
-              ip_address,
-              location,
-              device_name,
-              last_login: new Date(),
-              created_at: new Date(),
-              refresh_token: refreshToken,
-              expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-            },
+          // const addToken = await prisma.devices.upsert({
+          //   where: {
+          //     user_id_device_id: {
+          //       user_id: user.id,
+          //       device_id,
+          //     },
+          //   },
+          //   update: {
+          //     ip_address,
+          //     location,
+          //     refresh_token: refreshToken,
+          //     last_login: new Date(),
+          //     expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          //   },
+
+          //   create: {
+          //     user_id: user.id,
+          //     device_id,
+          //     ip_address,
+          //     location,
+          //     device_name,
+          //     last_login: new Date(),
+          //     created_at: new Date(),
+          //     refresh_token: refreshToken,
+          //     expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          //   },
+          // });
+
+          console.log({
+            device_id: device_id.length,
+            device_name: device_name.length,
+            ip_address: ip_address.length,
+            location: location.length,
+            refreshToken: refreshToken.length,
           });
+          console.log(device_id);
+          console.log(typeof device_id);
+          console.log(device_id.length);
+
+          const addToken = await prisma.$queryRaw`
+  INSERT INTO devices (
+    user_id,
+    device_id,
+    ip_address,
+    location,
+    device_name,
+    last_login,
+    created_at,
+    refresh_token,
+    expires_at
+  )
+  VALUES (
+    ${user.id},
+    ${device_id},
+    ${ip_address},
+    ${location},
+    ${device_name},
+    NOW(),
+    NOW(),
+    ${refreshToken},
+    NOW() + INTERVAL '7 days'
+  )
+  ON CONFLICT (user_id, device_id)
+  DO UPDATE SET
+    ip_address = EXCLUDED.ip_address,
+    location = EXCLUDED.location,
+    refresh_token = EXCLUDED.refresh_token,
+    last_login = NOW(),
+    expires_at = NOW() + INTERVAL '7 days'
+  RETURNING *;
+`;
 
           await context.request.cookieStore?.set("accessToken", accessToken, {
             httpOnly: true,
@@ -280,29 +334,18 @@ const userResolvers = {
         });
 
         if (!record) {
-          return {
-            message: "Invalid Email",
-            status: 400,
-            success: false,
-          };
+          // return { message: "Invalid OTP", status: 400, success: false };
+          throw new Error("Registration Failed");
         }
 
         const isExpired = new Date(record.expires_at) < new Date();
         if (isExpired) {
-          return {
-            message: "OTP Expired",
-            status: 400,
-            success: false,
-          };
+          throw new Error("OTP Expired");
         }
 
         const isMatch = await bcrypt.compare(String(otp), record.otp);
         if (!isMatch) {
-          return {
-            message: "Invalid OTP",
-            status: 400,
-            success: false,
-          };
+          throw new Error("Invalid Otp");
         }
 
         // create user
@@ -310,12 +353,14 @@ const userResolvers = {
         //   data: { email },
         // });
 
-        await prisma.register.update({
+        const is_verified = await prisma.register.update({
           where: { email },
           data: {
             is_verified: true,
           },
         });
+
+        console.log(is_verified, "is verifieddd");
 
         return {
           message: "OTP Verified Successfully",
@@ -323,16 +368,27 @@ const userResolvers = {
           success: true,
           data: {
             email,
+            is_verified: is_verified.is_verified,
           },
         };
       } catch (error) {
         console.log(error);
-        return {
-          message: "Something went wrong",
-          status: 500,
-          success: false,
-          error: error.message,
-        };
+        // throw error;
+
+        throw new GraphQLError(error.message || "Something went wrong", {
+          extensions: {
+            code: "BAD_REQUEST",
+            http: {
+              status: 400,
+            },
+          },
+        });
+        // return {
+        //   message: "Something went wrong",
+        //   status: 500,
+        //   success: false,
+        //   error: error.message,
+        // };
       }
     },
     createUser: async (
