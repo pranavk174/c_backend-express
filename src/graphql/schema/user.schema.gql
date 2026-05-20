@@ -9,7 +9,7 @@ type Otp implements Email {
 
 type User implements Email {
   name: String!
-  id: Int!
+  id: ID!
   user_name: String!
   email: String!
   bio: String

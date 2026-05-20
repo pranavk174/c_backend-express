@@ -40,11 +40,15 @@ const chatResolver = {
       SELECT 
       m.id,
     
-    CASE 
-        WHEN m.is_deleted = true THEN 'Deleted message'
-        when m.id = md.message_id  Then 'Deleted message'
-        ELSE m.content
-      
+CASE
+    WHEN m.is_deleted THEN 'Deleted message'
+
+    WHEN md.message_id = m.id
+         AND md.user_id = ${payload.userId}
+    THEN 'Deleted message'
+
+    ELSE m.content
+
     END AS content,
 
     m.chat_id,
@@ -91,7 +95,7 @@ WHERE m.chat_id = ${chat_id};
         `;
 
         // console.dir(chats, { depth: null });
-        console.log(JSON.stringify(chats, null, 2));
+        // console.log(JSON.stringify(chats, null, 2));
 
         if (!chats) {
           throw new Error();
@@ -187,7 +191,7 @@ ORDER BY c.id, m.created_at DESC NULLS LAST;
 
 `;
 
-        console.log(chats, "chatsssssss");
+        // console.log(chats, "chatsssssss");
 
         if (!chats) {
           throw new Error();
@@ -218,7 +222,7 @@ ORDER BY c.id, m.created_at DESC NULLS LAST;
         
         `;
 
-        console.log(data, "dataaaaaa");
+        // console.log(data, "dataaaaaa");
 
         return {
           message: "Data get Successs",
@@ -242,7 +246,7 @@ ORDER BY c.id, m.created_at DESC NULLS LAST;
   Mutation: {
     sendMessage: async (
       _,
-      { input: { chat_ids, reciever_ids, content = null, media } },
+      { input: { chat_ids, reciever_ids, content = null, media = [] } },
       ctx,
     ) => {
       const payload = ctx.user;
@@ -275,7 +279,7 @@ ORDER BY c.id, m.created_at DESC NULLS LAST;
           const reciever_id = parseInt(reciever_ids[0]);
           const reciever = await chekUserExists(prisma, reciever_ids);
 
-          console.log(typeof reciever_id, "type dataaa...");
+          // console.log(typeof reciever_id, "type dataaa...");
           if (!reciever.length > 0) {
             throw new Error("Reciever Does not exists");
           }
@@ -318,7 +322,7 @@ ORDER BY c.id, m.created_at DESC NULLS LAST;
           
           `;
 
-        if (media.length > 0) {
+        if (media && media.length > 0) {
           const [addMedia] = await Promise.all(
             media.map((m) => {
               return prisma.$queryRaw`
@@ -334,7 +338,7 @@ ORDER BY c.id, m.created_at DESC NULLS LAST;
           }
         }
 
-        console.log(chatId, "chatiddddd");
+        // console.log(chatId, "chatiddddd");
 
         if (!addMessage) {
           throw new Error();
@@ -364,7 +368,7 @@ ORDER BY c.id, m.created_at DESC NULLS LAST;
     ) => {
       const payload = ctx.user;
 
-      console.log(message_ids, "ctx dataaaaaaaa");
+      // console.log(message_ids, "ctx dataaaaaaaa");
       if (message_ids.length < 1 || !content) {
         return {
           message: "Data is missing",
@@ -381,7 +385,7 @@ ORDER BY c.id, m.created_at DESC NULLS LAST;
         
         `;
 
-        console.log(messageData, "message dataaa.");
+        // console.log(messageData, "message dataaa.");
 
         if (messageData.length < 1) {
           throw new Error("This message does not exist or has been deleted");

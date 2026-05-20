@@ -18,3 +18,23 @@ export const validateToken = async (context) => {
 
   return payload;
 };
+
+
+export const validateCookie = async (token) => {
+  let payload;
+  try {
+    const cookie = token;
+
+    // console.log(cookie, "cookiessssss", context)
+    // console.log(cookie, "cookies dataaaaa");
+    if (!cookie) throw new Error("No Access token");
+
+    const accessToken = token
+    payload = jwt.verify(accessToken, process.env.JWT_SECRET);
+  } catch (err) {
+    console.log(err, "errrrrrrrrr");
+    throw new Error("Invalid access token");
+  }
+
+  return payload;
+};

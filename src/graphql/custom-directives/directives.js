@@ -15,7 +15,7 @@ export function authDirectiveTransformer(schema) {
 
         fieldConfig.resolve = async function (source, args, context, info) {
           try {
-            console.log("AUTH DIRECTIVE RUNNING");
+            // console.log("AUTH DIRECTIVE RUNNING");
 
             // TOKEN VALIDATION
             const payload = await validateToken(context);
@@ -68,7 +68,7 @@ export const isChatMemberDirective = (schema) => {
 
   `;
 
-            console.log(data, "dataaaaaaa");
+            // console.log(data, "dataaaaaaa");
             if (data.length !== args.input.chat_ids.length) {
               throw new Error("User is not a member of all chats");
             }

@@ -701,7 +701,7 @@ const userResolvers = {
     logout: async (_, __, context) => {
       try {
         const payload = context.user;
-        console.log(payload, "payloadddddd");
+        // console.log(payload, "payloadddddd");
 
         const loggedout = await prisma.devices.update({
           where: {

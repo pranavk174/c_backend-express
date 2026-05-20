@@ -8,25 +8,26 @@ datasource db {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model users {
-  id                                           Int                 @id @default(autoincrement())
+  id                                           Int                     @id @default(autoincrement())
   name                                         String
-  mobile                                       String              @unique @db.VarChar(30)
-  bio                                          String?             @db.VarChar(205)
-  profile_pic                                  String?             @default("https://static.vecteezy.com/system/resources/previews/024/983/914/large_2x/simple-user-default-icon-free-png.png") @db.VarChar(300)
-  email                                        String              @unique @db.VarChar(45)
-  user_name                                    String              @unique @db.VarChar(50)
-  created_at                                   DateTime            @default(now()) @db.Timestamptz(6)
-  account_status                               account_status      @default(active)
-  account_status_changed_at                    DateTime            @default(now()) @db.Timestamptz(6)
-  block_block_user_idTousers                   block[]             @relation("block_user_idTousers")
-  block_block_blocked_user_idTousers           block[]             @relation("block_blocked_user_idTousers")
+  mobile                                       String                  @unique @db.VarChar(30)
+  bio                                          String?                 @db.VarChar(205)
+  profile_pic                                  String?                 @default("https://static.vecteezy.com/system/resources/previews/024/983/914/large_2x/simple-user-default-icon-free-png.png") @db.VarChar(300)
+  email                                        String                  @unique @db.VarChar(45)
+  user_name                                    String                  @unique @db.VarChar(50)
+  created_at                                   DateTime                @default(now()) @db.Timestamptz(6)
+  account_status                               account_status          @default(active)
+  account_status_changed_at                    DateTime                @default(now()) @db.Timestamptz(6)
+  block_block_user_idTousers                   block[]                 @relation("block_user_idTousers")
+  block_block_blocked_user_idTousers           block[]                 @relation("block_blocked_user_idTousers")
   chat_member                                  chat_member[]
   devices                                      devices[]
   groups                                       groups[]
   message                                      message[]
+  message_delete_for_me                        message_delete_for_me[]
   message_reaction                             message_reaction[]
-  notification_notification_receiver_idTousers notification[]      @relation("notification_receiver_idTousers")
-  notification_notification_sender_idTousers   notification[]      @relation("notification_sender_idTousers")
+  notification_notification_receiver_idTousers notification[]          @relation("notification_receiver_idTousers")
+  notification_notification_sender_idTousers   notification[]          @relation("notification_sender_idTousers")
   notification_seen                            notification_seen[]
   privacy_settings                             privacy_settings[]
   privacy_user                                 privacy_user[]
@@ -101,13 +102,13 @@ model chat_member {
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model devices {
   login_id      Int       @id @default(autoincrement())
-  device_id     String    @db.VarChar(100)
+  device_id     String    @db.VarChar(255)
   device_name   String    @db.VarChar(100)
   user_id       Int
   created_at    DateTime  @default(now()) @db.Timestamptz(6)
   ip_address    String?   @db.VarChar(45)
   location      String    @db.VarChar(200)
-  refresh_token String?   @db.VarChar(250)
+  refresh_token String?   @db.VarChar(500)
   expires_at    DateTime? @db.Timestamptz(6)
   last_login    DateTime  @default(now()) @db.Timestamptz(6)
   logged_out_at DateTime? @db.Timestamptz(6)
@@ -121,7 +122,7 @@ model edit_message {
   edit_message_id Int      @id @default(autoincrement())
   message_id      Int
   content         String
-  old_content     String
+  old_content     String?
   created_at      DateTime @default(now()) @db.Timestamptz(6)
   message         message  @relation(fields: [message_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
@@ -145,26 +146,27 @@ model groups {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model message {
-  id                                                       Int                @id @default(autoincrement())
+  id                                                       Int                     @id @default(autoincrement())
   chat_id                                                  Int
   sender_id                                                Int
   content                                                  String?
   story_id                                                 Int?
-  created_at                                               DateTime           @default(now()) @db.Timestamptz(6)
-  is_edited                                                Boolean?           @default(false)
+  created_at                                               DateTime                @default(now()) @db.Timestamptz(6)
+  is_edited                                                Boolean?                @default(false)
   reply_to_message_id                                      Int?
   forwarded_from_message_id                                Int?
-  is_forwarded                                             Boolean?           @default(false)
-  is_deleted                                               Boolean?           @default(false)
+  is_forwarded                                             Boolean?                @default(false)
+  is_deleted                                               Boolean?                @default(false)
   attachment                                               attachment[]
   edit_message                                             edit_message[]
-  chat                                                     chat               @relation(fields: [chat_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_chat_id")
-  message_message_forwarded_from_message_idTomessage       message?           @relation("message_forwarded_from_message_idTomessage", fields: [forwarded_from_message_id], references: [id], onUpdate: NoAction, map: "fk_forwarded_from_message_id")
-  other_message_message_forwarded_from_message_idTomessage message[]          @relation("message_forwarded_from_message_idTomessage")
-  message_message_reply_to_message_idTomessage             message?           @relation("message_reply_to_message_idTomessage", fields: [reply_to_message_id], references: [id], onUpdate: NoAction, map: "fk_reply_to_message_id")
-  other_message_message_reply_to_message_idTomessage       message[]          @relation("message_reply_to_message_idTomessage")
-  users                                                    users              @relation(fields: [sender_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_sender_id")
-  story                                                    story?             @relation(fields: [story_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_story_id")
+  chat                                                     chat                    @relation(fields: [chat_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_chat_id")
+  message_message_forwarded_from_message_idTomessage       message?                @relation("message_forwarded_from_message_idTomessage", fields: [forwarded_from_message_id], references: [id], onUpdate: NoAction, map: "fk_forwarded_from_message_id")
+  other_message_message_forwarded_from_message_idTomessage message[]               @relation("message_forwarded_from_message_idTomessage")
+  message_message_reply_to_message_idTomessage             message?                @relation("message_reply_to_message_idTomessage", fields: [reply_to_message_id], references: [id], onUpdate: NoAction, map: "fk_reply_to_message_id")
+  other_message_message_reply_to_message_idTomessage       message[]               @relation("message_reply_to_message_idTomessage")
+  users                                                    users                   @relation(fields: [sender_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_sender_id")
+  story                                                    story?                  @relation(fields: [story_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_story_id")
+  message_delete_for_me                                    message_delete_for_me[]
   message_reaction                                         message_reaction[]
   seen_message                                             seen_message[]
 
@@ -188,6 +190,7 @@ model message_reaction {
   users               users    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([message_id, user_id])
+  @@unique([message_id, user_id], map: "unique_message_user")
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -332,6 +335,18 @@ model user_presence {
   last_seen  DateTime? @db.Timestamptz(6)
   updated_at DateTime? @default(now()) @db.Timestamptz(6)
   users      users     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model message_delete_for_me {
+  id         Int       @id @default(autoincrement())
+  message_id Int
+  deleted_at DateTime? @default(now()) @db.Timestamp(6)
+  user_id    Int
+  message    message   @relation(fields: [message_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users      users     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([message_id, user_id])
 }
 
 enum chat_type_enum {
