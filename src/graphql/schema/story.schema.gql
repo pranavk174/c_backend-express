@@ -1,12 +1,12 @@
 input createStoryInput {
   text_data: String
   content: String
-  message_ids: [ID!]
+  message_ids: [Int!]
 }
 
 type Story {
-  id: ID!
-  user_id: ID!
+  id: Int!
+  user_id: Int!
   text_data: String
   content: String
   created_at: String!
@@ -19,7 +19,7 @@ type StoryData {
 }
 
 input storyLikeInput {
-  id: ID!
+  id: Int!
   like: Boolean!
   reaction_id: Int
 }
@@ -54,15 +54,15 @@ input ForwardStoryInput {
 }
 
 extend type Query {
-  getStoryById(id: ID!): storyApiResponse! @auth
+  getStoryById(id: Int!): storyApiResponse! @auth
   getAllStories: storyApiResponse! @auth
 }
 
 extend type Mutation {
   createStory(input: createStoryInput!): storyApiResponse! @auth
-  deleteStory(id: ID!): storyApiResponse! @auth
-  replyToStory(id: ID!, content: String!): storyApiResponse! @auth
-  seenStory(id: ID!): storyApiResponse! @auth
+  deleteStory(id: Int!): storyApiResponse! @auth
+  replyToStory(id: Int!, content: String!): storyApiResponse! @auth
+  seenStory(id: Int!): storyApiResponse! @auth
   likeStory(input: storyLikeInput!): storyApiResponse! @auth
   forwardStory(input: ForwardStoryInput!): storyApiResponse! @auth
 }

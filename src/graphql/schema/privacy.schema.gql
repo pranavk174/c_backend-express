@@ -1,13 +1,13 @@
 type Privacy {
-  privacy_id: ID!
+  privacy_id: Int!
   privacy_type: String!
   entity_type: String!
   users: [User!]!
 }
 
 input PrivacyUserInput {
-  privacy_id: ID!
-  users: [ID!]!
+  privacy_id: Int!
+  users: [Int!]!
 }
 
 type PrivacyList {
@@ -30,7 +30,7 @@ type PrivacyResponse implements apiResponse {
 
 extend type Query {
   getPrivacySettings: PrivacyResponse! @auth
-  getPrivacyUsers(privacy_id: ID!): PrivacyResponse! @auth
+  getPrivacyUsers(privacy_id: Int!): PrivacyResponse! @auth
 }
 
 extend type Mutation {

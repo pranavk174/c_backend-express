@@ -1,4 +1,5 @@
 import prisma from "../../../prisma/prisma-client.js";
+import { Prisma } from "@prisma/client";
 import { validateToken } from "../../lib/tokenvalidator.js";
 import {
   checkChatExists,
@@ -22,9 +23,14 @@ const chatResolver = {
     },
   },
   Query: {
-    getChatById: async (_, { input: { chat_ids } }, ctx) => {
+    getChatById: async (
+      _,
+      { input: { chat_ids, cursor = null, limit = 20 } },
+      ctx,
+    ) => {
       const payload = ctx.user;
 
+      const parsedCursor = cursor ? Number(cursor) : null;
       if (chat_ids.length < 1) {
         return {
           message: "Chat Id is missing!",
@@ -91,7 +97,14 @@ LEFT JOIN LATERAL (
 ) r ON true
 
 
-WHERE m.chat_id = ${chat_id};
+WHERE 
+    m.chat_id = ${chat_id}
+
+    ${cursor ? Prisma.sql`AND m.id < ${parsedCursor}` : Prisma.empty}
+
+ORDER BY m.id DESC
+LIMIT ${limit}
+
         `;
 
         // console.dir(chats, { depth: null });
@@ -100,13 +113,20 @@ WHERE m.chat_id = ${chat_id};
         if (!chats) {
           throw new Error();
         }
+
+        const formattedChats = [...chats].reverse();
+
+        const nextCursor = chats.length > 0 ? chats[chats.length - 1].id : null;
+
         return {
           message: "Successfully retrieved Chat",
           status: 200,
           success: true,
           data: {
             _responseType: "SingleChat",
-            items: chats,
+            items: formattedChats,
+            nextCursor,
+            hasMore: chats.length === limit,
           },
         };
       } catch (err) {

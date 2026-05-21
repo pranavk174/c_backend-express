@@ -9,8 +9,8 @@ enum delete_type {
   EVERYONE
 }
 type Chats {
-  chat_id: ID!
-  user_id: ID!
+  chat_id: Int!
+  user_id: Int!
   profile_pic: String
   last_message: String
   last_message_at: String
@@ -19,7 +19,7 @@ type Chats {
 }
 
 type emoji {
-  react_id: ID!
+  react_id: Int!
   emoji: String!
 }
 
@@ -28,20 +28,20 @@ type Emojis {
 }
 
 type reaction {
-  react_id: ID!
-  user_id: ID!
+  react_id: Int!
+  user_id: Int!
 }
 
 type Chat {
-  id: ID!
-  sender_id: ID!
+  id: Int!
+  sender_id: Int!
   created_at: String!
   seen_at: String
   is_forwarded: Boolean!
   content: String
-  story_id: ID
+  story_id: Int
   is_edited: Boolean!
-  reply_to_message: ID
+  reply_to_message: Int
   is_deleted: Boolean
   reactions: [reaction]!
 }
@@ -52,6 +52,8 @@ type Chat {
 
 type SingleChat {
   items: [Chat]
+  hasMore: Boolean!
+  nextCursor: Int
 }
 type AllChats {
   items: [Chats]
@@ -75,10 +77,13 @@ input Media {
 }
 
 input ChatInput {
-  reciever_ids: [ID!]
+  reciever_ids: [Int!]
   chat_ids: [Int!]
-  message_ids: [ID!]
+  message_ids: [Int!]
   delete_type: delete_type
+  cursor: Int
+  hasMore: Boolean
+  limit: Int
   content: String
   reaction_id: Int
   media: [Media!]
