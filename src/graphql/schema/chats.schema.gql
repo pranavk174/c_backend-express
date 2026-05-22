@@ -38,10 +38,11 @@ type Chat {
   created_at: String!
   seen_at: String
   is_forwarded: Boolean!
+  preview: String
   content: String
   story_id: Int
   is_edited: Boolean!
-  reply_to_message: Int
+  reply_to_message_id: Int
   is_deleted: Boolean
   reactions: [reaction]!
 }

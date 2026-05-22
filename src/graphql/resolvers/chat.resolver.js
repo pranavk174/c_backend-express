@@ -56,14 +56,14 @@ CASE
     ELSE m.content
 
     END AS content,
-
+a.url as preview,
     m.chat_id,
     m.sender_id,
     m.created_at,
     m.is_forwarded,
     m.is_edited,
     m.is_deleted,
-    m.reply_to_message_id as reply_to_message,
+    m.reply_to_message_id as reply_to_message_id,
     sm.user_id as seen_users,
   COALESCE(r.reactions, '[]'::json) as reactions
 FROM message m
@@ -74,6 +74,9 @@ ON m.id = sm.message_id
 left join message_delete_for_me  md
 on m.id = md.message_id
 
+
+left join attachment a
+on a.message_id = m.id
 
 LEFT JOIN LATERAL (
 
@@ -108,7 +111,6 @@ LIMIT ${limit}
         `;
 
         // console.dir(chats, { depth: null });
-        // console.log(JSON.stringify(chats, null, 2));
 
         if (!chats) {
           throw new Error();
@@ -117,6 +119,8 @@ LIMIT ${limit}
         const formattedChats = [...chats].reverse();
 
         const nextCursor = chats.length > 0 ? chats[chats.length - 1].id : null;
+        // console.log(JSON.stringify(formattedChats, null, 2));
+        // console.log(formattedChats)
 
         return {
           message: "Successfully retrieved Chat",

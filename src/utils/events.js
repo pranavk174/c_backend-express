@@ -1,6 +1,6 @@
 export const ALERT = "ALERT";
 export const REFETCH_CHATS = "REFETCH_CHATS";
-
+export const ERROR = "ERROR"
 // Message
 export const NEW_MESSAGE = "NEW_MESSAGE";
 export const SEND_MESSAGE = "SEND_MESSAGE";
