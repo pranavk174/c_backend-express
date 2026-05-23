@@ -13,6 +13,7 @@ import {
   CHAT_LEAVED,
   ERROR,
   NEW_MESSAGE,
+  MESSAGE_REACTION,
   REFETCH_CHATS,
   REPLY_MESSAGE,
   SEND_MESSAGE,
@@ -21,7 +22,11 @@ import cookie from "cookie";
 import { validateCookie } from "./lib/tokenvalidator.js";
 import { checkMessageExists } from "./lib/helpers.js";
 import { joinChat, leaveChat, userSocketIDs } from "./utils/socket.helper.js";
-import { replyMessage, sendMessage } from "./controller/Socket/controller.js";
+import {
+  reactMessage,
+  replyMessage,
+  sendMessage,
+} from "./controller/Socket/controller.js";
 // import { authMiddleware } from "./middlewares/auth.js";
 const app = express();
 const server = http.createServer(app);
@@ -98,6 +103,12 @@ io.on("connection", (socket) => {
   socket.on(REPLY_MESSAGE, (data) => {
     console.log(data, "new reply messageeeeee");
     replyMessage(socket, payload, data);
+  });
+
+  socket.on(MESSAGE_REACTION, (data) => {
+    console.log(data, "dataaaaaaa in reaction...");
+
+    reactMessage(socket, payload, data);
   });
 
   socket.on("disconnect", () => {

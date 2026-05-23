@@ -1,3 +1,4 @@
+import { userSocketIDs } from "../utils/socket.helper.js";
 export const checkMessageExists = async (prisma, message_ids) => {
   const data = await prisma.$queryRaw`
 
@@ -69,4 +70,9 @@ HAVING
     `;
 
   return data;
+};
+
+export const getSockets = (member) => {
+  const receiverSocketId = userSocketIDs.get(String(member));
+  return receiverSocketId;
 };

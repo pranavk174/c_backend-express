@@ -13,6 +13,7 @@ export const leaveChat = (data) => {
   onlineUsers.delete(user_id.toString());
 };
 
-export const getSocket = (member) => {};
-
-
+export const getSockets = (member) => {
+  const receiverSocketId = userSocketIDs.get(String(member));
+  return receiverSocketId;
+};

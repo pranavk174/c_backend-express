@@ -1,11 +1,13 @@
-import { userSocketIDs } from "../../utils/socket.helper.js";
+import { getSockets, userSocketIDs } from "../../utils/socket.helper.js";
 import prisma from "../../../prisma/prisma-client.js";
 import { checkMessageExists } from "../../lib/helpers.js";
 import {
   REFETCH_CHATS,
   SEND_MESSAGE,
   REPLY_MESSAGE,
+  MESSAGE_REACTION,
   NEW_MESSAGE,
+  ERROR,
 } from "../../utils/events.js";
 export const sendMessage = async (socket, payload, data) => {
   console.log(data, "new messageeeeee");
@@ -181,7 +183,7 @@ export const replyMessage = async (socket, payload, data) => {
     }
     console.log(updated, "dadasdsdsad");
 
-    const receiverSocketId = userSocketIDs.get(String(reciever_ids[0]));
+    const receiverSocketId = getSockets(reciever_ids[0]);
     if (receiverSocketId) {
       console.log(
         "yes condition....................",
@@ -202,5 +204,101 @@ export const replyMessage = async (socket, payload, data) => {
     console.log(error, "err in reply....");
     socket.emit(ERROR, error.message);
     return;
+  }
+};
+
+export const reactMessage = async (socket, payload, data) => {
+  const { message_ids, chat_ids, reciever_ids, react_id: reaction_id } = data;
+  console.log(data, "dataaaaaa");
+  if (!message_ids.length > 0 || !reaction_id) {
+    console.log("issue here......", !message_ids.length > 0, !reaction_id);
+
+    socket.emit(ERROR, "data is missing");
+
+    return {
+      message: "data is Missing",
+      success: false,
+      status: 400,
+    };
+  }
+
+  const message_id = message_ids[0];
+
+  try {
+    const [messaseData, reactionData] = await Promise.all([
+      checkMessageExists(prisma, message_ids),
+      prisma.$queryRaw`
+      
+      select react_id from reaction where react_id = ${reaction_id}
+
+      `,
+    ]);
+
+    if (messaseData.length < 1 || reactionData.length < 1) {
+      throw new Error("Message or Reaction doesnt exists or has been deleted");
+    }
+
+    const updated = await prisma.$queryRaw`
+    
+    INSERT INTO message_reaction (
+message_id,
+reaction_id,
+user_id
+)
+
+VALUES (
+${message_id},
+${reaction_id},
+${payload.userId}
+)
+
+ON CONFLICT (message_id, user_id)
+
+DO UPDATE
+SET 
+reaction_id = EXCLUDED.reaction_id,
+updated_at = CURRENT_TIMESTAMP returning *;
+    
+    
+    `;
+
+    if (!updated) {
+      throw new Error("Reaction Failed");
+    }
+
+    console.log(updated, "updated reaction");
+
+    const receiverSocketId = getSockets(reciever_ids[0]);
+    if (receiverSocketId) {
+      console.log(
+        "yes condition....................",
+        userSocketIDs,
+        receiverSocketId,
+      );
+      socket.to(receiverSocketId).emit(
+        MESSAGE_REACTION,
+        (data = {
+          message_id: updated[0].message_id,
+          react_id: updated[0].reaction_id,
+          user_id:updated[0].user_id
+        }),
+      );
+    }
+    // socket.emit(MESSAGE_REACTION, updated[0]);
+
+    return {
+      message: "Successfully Reacted Message",
+      status: 201,
+      success: true,
+    };
+  } catch (error) {
+    console.log("error in reactiin", error);
+    socket.emit(ERROR, error.message);
+    // return {
+    //   message: "Some thing went wrong",
+    //   ststu: 500,
+    //   success: false,
+    //   error: error.message,
+    // };
   }
 };
