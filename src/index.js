@@ -6,9 +6,13 @@ import prisma from "../prisma/prisma-client.js";
 import router from "./routes/route.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+
 import http from "http";
 import {
+  CHAT_JOINED,
+  CHAT_LEAVED,
   ERROR,
+  NEW_MESSAGE,
   REFETCH_CHATS,
   REPLY_MESSAGE,
   SEND_MESSAGE,
@@ -16,6 +20,8 @@ import {
 import cookie from "cookie";
 import { validateCookie } from "./lib/tokenvalidator.js";
 import { checkMessageExists } from "./lib/helpers.js";
+import { joinChat, leaveChat, userSocketIDs } from "./utils/socket.helper.js";
+import { replyMessage, sendMessage } from "./controller/Socket/controller.js";
 // import { authMiddleware } from "./middlewares/auth.js";
 const app = express();
 const server = http.createServer(app);
@@ -59,9 +65,11 @@ io.use(async (socket, next) => {
 
 // app.use("/api/v1", router);
 io.on("connection", (socket) => {
-  console.log("User connected:", socket.user);
+  console.log("User connected:", socket.user, socket.id);
 
   const payload = socket.user;
+  userSocketIDs.set(payload.userId.toString(), socket.id);
+  // User ka socketId map mein store karo
   // Example event
   socket.on("message", (data) => {
     console.log("Message received:", data);
@@ -70,188 +78,31 @@ io.on("connection", (socket) => {
     io.emit("message", data);
   });
 
-  socket.on(SEND_MESSAGE, async (data) => {
+  socket.on(SEND_MESSAGE, (data) => {
     console.log(data, "new messageeeeee");
 
-    const { content, media, chat_ids, reciever_ids } = data;
-    if (
-      (!content && !media) ||
-      (chat_ids &&
-        chat_ids.length < 1 &&
-        reciever_ids &&
-        reciever_ids.length < 1)
-    ) {
-      return {
-        message: "Data is missing...",
-        status: 400,
-        success: false,
-      };
-    }
-
-    // if(reciever_ids && reciever_ids.incldes(payload.userID))
-
-    let chatId = null;
-    let chat_id = null;
-    if (chat_ids && chat_ids.length > 0) {
-      chatId = chat_ids[0];
-      chat_id = chat_ids[0];
-    }
-
-    try {
-      if (!chat_id) {
-        const reciever_id = parseInt(reciever_ids[0]);
-        const reciever = await chekUserExists(prisma, reciever_ids);
-
-        // console.log(typeof reciever_id, "type dataaa...");
-        if (!reciever.length > 0) {
-          throw new Error("Reciever Does not exists");
-        }
-        // const memeberExists = await checkMemeberExists(prisma, reciever_ids);
-
-        const chatExists = await checkChatExists(
-          prisma,
-          payload.userId,
-          reciever_ids,
-        );
-
-        if (chatExists.length < 1) {
-          const data = await prisma.$queryRaw`
-        
-        insert into chat (chat_type) values('private')  RETURNING id;
-
-
-        `;
-
-          if (!data || data.length < 1) {
-            throw new Error();
-          }
-          chatId = data[0].id;
-
-          const chatmember = await prisma.$queryRaw`
-        
-        insert into chat_member (member_id ,chat_id ) values(${payload.userId},${chatId}),(${reciever_id},${chatId})
-        
-        `;
-          if (!chatmember) {
-            throw new Error();
-          }
-        }
-
-        chatId = chatExists[0].chat_id;
-      }
-      let addMessage = await prisma.$queryRaw`
-        
-        insert into message (content,sender_id ,created_at ,chat_id )  values(${content},${payload.userId},${new Date()},${chat_id ?? chatId}) returning *
-        
-        `;
-
-      if (media && media.length > 0) {
-        const [addMedia] = await Promise.all(
-          media.map((m) => {
-            return prisma.$queryRaw`
-
-        insert into attachment (message_id,url,file_type,file_name,file_size) values(${addMessage[0].id},${m.url},${m.file_type.toLowerCase()},${m.file_name},${m.file_size}) returning *
-
-        `;
-          }),
-        );
-
-        if (!addMedia) {
-          throw new Error();
-        }
-
-        addMessage = addMessage.map((msg) => ({
-          ...msg,
-          preview: addMedia[0].url,
-        }));
-      }
-
-      console.log(addMessage, "chatiddddd");
-
-      if (!addMessage) {
-        throw new Error();
-      }
-
-      socket.emit(REFETCH_CHATS, addMessage);
-
-      // const chatData = await
-    } catch (error) {
-      console.log(error);
-      socket.emit(ERROR, error.message);
-      return;
-    }
+    sendMessage(socket, payload, data);
   });
 
-  socket.on(REPLY_MESSAGE, async (data) => {
+  socket.on(CHAT_JOINED, (data) => {
+    // console.log("chat joined in event user .....", data);
+    joinChat(data);
+  });
+
+  socket.on(CHAT_LEAVED, (data) => {
+    // console.log("chat ;eaft. user .....", data);
+
+    leaveChat(data);
+  });
+
+  socket.on(REPLY_MESSAGE, (data) => {
     console.log(data, "new reply messageeeeee");
-
-    const { message_ids, chat_ids, content, media } = data;
-    if (message_ids.length !== 1 || (!content && !media)) {
-      socket.emit(ERROR, "Data is Missing");
-      return;
-    }
-
-    try {
-      const messageData = await checkMessageExists(prisma, message_ids);
-
-      // const memeberdata = await checkMemeberExists(
-      //   prisma,
-      //   messageData[0].chat_id,
-      //   payload.userId,
-      // );
-
-      const message_id = message_ids[0];
-      // if (messageData.length < 1) {
-      //   throw new Error("Message not Found");
-      // }
-
-      let updated = await prisma.$queryRaw`
-      insert into message (content,sender_id, reply_to_message_id ,chat_id) values(${content},${payload.userId},${message_id} , ${messageData[0].chat_id}) returning *
-      
-      `;
-
-      if (!updated) {
-        throw new Error("Message reply Failed");
-      }
-
-      if (media && media.length > 0) {
-        const [addMedia] = await Promise.all(
-          media.map((m) => {
-            return prisma.$queryRaw`
-
-        insert into attachment (message_id,url,file_type,file_name,file_size) values(${updated[0].id},${m.url},${m.file_type.toLowerCase()},${m.file_name},${m.file_size}) returning *
-
-        `;
-          }),
-        );
-
-        if (!addMedia) {
-          throw new Error();
-        }
-
-        updated = updated.map((msg) => ({
-          ...msg,
-          preview: addMedia[0].url,
-        }));
-      }
-      console.log(updated, "dadasdsdsad");
-
-      socket.emit(REFETCH_CHATS, updated);
-
-      return {
-        message: "Message Replied successfully",
-        status: 201,
-        success: true,
-      };
-    } catch (error) {
-      console.log(error, "err in reply....");
-      socket.emit(ERROR, error.message);
-      return;
-    }
+    replyMessage(socket, payload, data);
   });
 
   socket.on("disconnect", () => {
     console.log("User disconnected:", socket.id);
+    userSocketIDs.delete(String(payload.userId));
   });
 });
 

@@ -47,10 +47,10 @@ const chatResolver = {
       m.id,
     
 CASE
-    WHEN m.is_deleted THEN 'Deleted message'
+
 
     WHEN md.message_id = m.id
-         AND md.user_id = ${payload.userId}
+     AND md.user_id = ${payload.userId}
     THEN 'Deleted message'
 
     ELSE m.content
@@ -101,7 +101,7 @@ LEFT JOIN LATERAL (
 
 
 WHERE 
-    m.chat_id = ${chat_id}
+    m.chat_id = ${chat_id} and m.is_deleted = false
 
     ${cursor ? Prisma.sql`AND m.id < ${parsedCursor}` : Prisma.empty}
 
