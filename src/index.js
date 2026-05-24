@@ -17,11 +17,19 @@ import {
   REFETCH_CHATS,
   REPLY_MESSAGE,
   SEND_MESSAGE,
+  ONLINE_USERS,
 } from "./utils/events.js";
 import cookie from "cookie";
 import { validateCookie } from "./lib/tokenvalidator.js";
 import { checkMessageExists } from "./lib/helpers.js";
-import { joinChat, leaveChat, userSocketIDs } from "./utils/socket.helper.js";
+import {
+  getSocketmembers,
+  getSockets,
+  joinChat,
+  leaveChat,
+  onlineUsers,
+  userSocketIDs,
+} from "./utils/socket.helper.js";
 import {
   reactMessage,
   replyMessage,
@@ -71,9 +79,18 @@ io.use(async (socket, next) => {
 // app.use("/api/v1", router);
 io.on("connection", (socket) => {
   console.log("User connected:", socket.user, socket.id);
-
   const payload = socket.user;
   userSocketIDs.set(payload.userId.toString(), socket.id);
+  onlineUsers.add(payload.userId.toString());
+  const sendUsers = () => {
+    const members = getSocketmembers(payload.userId);
+    console.log(members, "members....");
+    socket.emit(ONLINE_USERS, Array.from(onlineUsers));
+  };
+
+  sendUsers();
+
+  console.log(userSocketIDs, "use socet idssss");
   // User ka socketId map mein store karo
   // Example event
   socket.on("message", (data) => {
@@ -92,11 +109,13 @@ io.on("connection", (socket) => {
   socket.on(CHAT_JOINED, (data) => {
     // console.log("chat joined in event user .....", data);
     joinChat(data);
+    const members = getSocketmembers(payload.userId);
+    console.log(members, "members....");
+    socket.to(members).emit(ONLINE_USERS, Array.from(onlineUsers));
   });
 
   socket.on(CHAT_LEAVED, (data) => {
     // console.log("chat ;eaft. user .....", data);
-
     leaveChat(data);
   });
 
@@ -112,6 +131,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
+    onlineUsers.delete(payload.userId);
     console.log("User disconnected:", socket.id);
     userSocketIDs.delete(String(payload.userId));
   });

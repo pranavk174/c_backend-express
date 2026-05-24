@@ -17,3 +17,8 @@ export const getSockets = (member) => {
   const receiverSocketId = userSocketIDs.get(String(member));
   return receiverSocketId;
 };
+
+export const getSocketmembers = (id) => {
+  const data = Array.from(userSocketIDs).map(d=> d[1] );
+  return data
+};
