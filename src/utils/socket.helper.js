@@ -1,6 +1,6 @@
 export const userSocketIDs = new Map(); // userId -> socketId
 export const onlineUsers = new Set();
-
+import { ONLINE_USERS } from "./events.js";
 export const joinChat = (data) => {
   const { user_id } = data;
   // console.log("chat joined user .....", data);
@@ -19,6 +19,12 @@ export const getSockets = (member) => {
 };
 
 export const getSocketmembers = (id) => {
-  const data = Array.from(userSocketIDs).map(d=> d[1] );
-  return data
+  const data = Array.from(userSocketIDs).map((d) => d[1]);
+  return data;
+};
+
+export const sendUsers = (socket) => {
+  console.log(onlineUsers, "users online");
+
+  socket.emit(ONLINE_USERS, Array.from(onlineUsers));
 };

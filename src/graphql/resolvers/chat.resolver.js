@@ -64,12 +64,18 @@ a.url as preview,
     m.is_edited,
     m.is_deleted,
     m.reply_to_message_id as reply_to_message_id,
-    sm.user_id as seen_users,
+    COALESCE(seen.seen_users, '{}') as seen_users,
   COALESCE(r.reactions, '[]'::json) as reactions
 FROM message m
-LEFT JOIN seen_message sm 
+LEFT JOIN LATERAL (
 
-ON m.id = sm.message_id 
+   SELECT ARRAY_AGG(sm.user_id) as seen_users
+
+   FROM seen_message sm
+
+   WHERE sm.message_id = m.id
+
+) seen ON true
 
 left join message_delete_for_me  md
 on m.id = md.message_id
@@ -106,7 +112,8 @@ WHERE
     ${cursor ? Prisma.sql`AND m.id < ${parsedCursor}` : Prisma.empty}
 
 ORDER BY m.id DESC
-LIMIT ${limit}
+LIMIT  ${limit}
+
 
         `;
 
@@ -337,6 +344,7 @@ ORDER BY c.id, m.created_at DESC NULLS LAST;
               throw new Error();
             }
           }
+          console.log(chatExists, "chartexistssssss");
 
           chatId = chatExists[0].chat_id;
         }

@@ -364,8 +364,8 @@ const userResolvers = {
           status: 200,
           success: true,
           data: {
-            email,
-            is_verified: is_verified.is_verified,
+            _responseType: "verifyOtpData",
+            ...{ email, is_verified: is_verified.is_verified },
           },
         };
       } catch (error) {

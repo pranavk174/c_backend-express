@@ -6,7 +6,7 @@ import prisma from "../prisma/prisma-client.js";
 import router from "./routes/route.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
-
+import { sendUsers } from "./utils/socket.helper.js";
 import http from "http";
 import {
   CHAT_JOINED,
@@ -18,6 +18,7 @@ import {
   REPLY_MESSAGE,
   SEND_MESSAGE,
   ONLINE_USERS,
+  MESSAGE_SEEN,
 } from "./utils/events.js";
 import cookie from "cookie";
 import { validateCookie } from "./lib/tokenvalidator.js";
@@ -33,6 +34,7 @@ import {
 import {
   reactMessage,
   replyMessage,
+  seenMessage,
   sendMessage,
 } from "./controller/Socket/controller.js";
 // import { authMiddleware } from "./middlewares/auth.js";
@@ -78,19 +80,14 @@ io.use(async (socket, next) => {
 
 // app.use("/api/v1", router);
 io.on("connection", (socket) => {
-  console.log("User connected:", socket.user, socket.id);
+  // console.log("User connected:", socket.user, socket.id);
   const payload = socket.user;
   userSocketIDs.set(payload.userId.toString(), socket.id);
   onlineUsers.add(payload.userId.toString());
-  const sendUsers = () => {
-    const members = getSocketmembers(payload.userId);
-    console.log(members, "members....");
-    socket.emit(ONLINE_USERS, Array.from(onlineUsers));
-  };
 
-  sendUsers();
+  sendUsers(socket);
 
-  console.log(userSocketIDs, "use socet idssss");
+  // console.log(userSocketIDs, "use socet idssss");
   // User ka socketId map mein store karo
   // Example event
   socket.on("message", (data) => {
@@ -112,6 +109,12 @@ io.on("connection", (socket) => {
     const members = getSocketmembers(payload.userId);
     console.log(members, "members....");
     socket.to(members).emit(ONLINE_USERS, Array.from(onlineUsers));
+    // seenMessage(socket, payload, data);
+  });
+
+  socket.on(MESSAGE_SEEN, (data) => {
+    console.log("message seenbd", data);
+    seenMessage(socket, payload, data);
   });
 
   socket.on(CHAT_LEAVED, (data) => {
@@ -131,9 +134,12 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    onlineUsers.delete(payload.userId);
-    console.log("User disconnected:", socket.id);
+    onlineUsers.delete(payload.userId.toString());
+    console.log("User disconnected:", payload.userId, socket.id, onlineUsers);
     userSocketIDs.delete(String(payload.userId));
+
+    // socket.emit(ONLINE_USERS, Array.from(onlineUsers));
+    sendUsers(io);
   });
 });
 

@@ -40,6 +40,7 @@ type Chat {
   is_forwarded: Boolean!
   preview: String
   content: String
+  seen_users: [Int]
   story_id: Int
   is_edited: Boolean!
   reply_to_message_id: Int

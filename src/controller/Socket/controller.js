@@ -8,6 +8,7 @@ import {
   MESSAGE_REACTION,
   NEW_MESSAGE,
   ERROR,
+  MESSAGE_SEEN,
 } from "../../utils/events.js";
 export const sendMessage = async (socket, payload, data) => {
   console.log(data, "new messageeeeee");
@@ -102,8 +103,6 @@ export const sendMessage = async (socket, payload, data) => {
       }));
     }
 
-    // console.log(addMessage, "chatiddddd");
-
     if (!addMessage) {
       throw new Error();
     }
@@ -111,15 +110,19 @@ export const sendMessage = async (socket, payload, data) => {
     console.log(reciever_ids[0], "clg..... recievr id...");
 
     const receiverSocketId = userSocketIDs.get(String(reciever_ids[0]));
+    addMessage[0] = { ...addMessage[0], seen_users: [] };
     if (receiverSocketId) {
       console.log(
         "yes condition....................",
         userSocketIDs,
         receiverSocketId,
       );
-      socket.to(receiverSocketId).emit(NEW_MESSAGE, addMessage);
+
+      socket.to(receiverSocketId).emit(REFETCH_CHATS, addMessage);
     }
-    socket.emit(REFETCH_CHATS, addMessage);
+
+    console.log(addMessage, "chatiddddd");
+    // socket.emit(REFETCH_CHATS, addMessage);
 
     // const chatData = await
   } catch (error) {
@@ -280,7 +283,7 @@ updated_at = CURRENT_TIMESTAMP returning *;
         (data = {
           message_id: updated[0].message_id,
           react_id: updated[0].reaction_id,
-          user_id:updated[0].user_id
+          user_id: updated[0].user_id,
         }),
       );
     }
@@ -300,5 +303,70 @@ updated_at = CURRENT_TIMESTAMP returning *;
     //   success: false,
     //   error: error.message,
     // };
+  }
+};
+
+export const seenMessage = async (socket, payload, data) => {
+  const { message_ids, chat_ids, reciever_id } = data;
+  console.log(data, "dataaaaaaaaaaa");
+  if (message_ids && message_ids.length < 1) {
+    return null;
+    // return {
+    //   message: "Message id is Missing",
+    //   status: 400,
+    //   success: false,
+    // };
+  }
+
+  try {
+    const messageData = await checkMessageExists(prisma, message_ids);
+
+    console.log(message_ids, "message idsss.");
+
+    const seen = await prisma.seen_message.createManyAndReturn({
+      data: message_ids.map((m) => ({
+        message_id: parseInt(m),
+        user_id: payload.userId,
+      })),
+    });
+
+    if (!seen) {
+      throw new Error("Error in message seen");
+    }
+
+    const receiverSocketId = getSockets(reciever_id);
+    if (receiverSocketId) {
+      console.log(
+        "yes condition....................",
+        userSocketIDs,
+        receiverSocketId,
+      );
+
+      const data = seen.map((d) => ({
+        message_id: d.message_id,
+        seen_user: d.user_id,
+        seen_at: d.seen_at,
+      }));
+
+      console.log(data, "dartaaa vent");
+      // socket.to(receiverSocketId).emit(MESSAGE_SEEN, data);
+      socket.to(receiverSocketId).emit(MESSAGE_SEEN, data);
+    }
+
+    // console.log(seen, "seend messagesssss");
+
+    return {
+      message: "Successfully Seen message",
+      status: 201,
+      success: true,
+    };
+  } catch (error) {
+    console.log(error, "error ");
+    return {
+      message: "Something went wrong",
+      status: 500,
+      success: false,
+      error: error.message,
+    };
   }
 };
