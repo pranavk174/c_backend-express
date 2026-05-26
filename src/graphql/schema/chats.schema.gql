@@ -16,6 +16,9 @@ type Chats {
   last_message_at: String
   name: String!
   chat_type: String!
+  bio: String
+  email: String!
+  mobile: String!
 }
 
 type emoji {

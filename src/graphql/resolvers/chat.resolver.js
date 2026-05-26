@@ -164,12 +164,14 @@ SELECT DISTINCT ON (c.id)
     u.id AS user_id,
     u.name,
     u.profile_pic,
+    u.bio as bio,
+    u.email as email,
+    u.mobile as mobile,
 
     m.id AS last_message_id,
 
     CASE 
-        WHEN m.is_deleted = true 
-        THEN 'Deleted message'
+        
 
         WHEN m.content IS NULL 
         THEN a.file_type::text
@@ -192,13 +194,13 @@ LEFT JOIN LATERAL (
     SELECT *
     FROM message message
 
-    WHERE message.chat_id = c.id
+    WHERE message.chat_id = c.id and message.is_deleted = false  
 
     AND NOT EXISTS (
         SELECT 1
         FROM message_delete_for_me md
         WHERE md.message_id = message.id
-        AND md.user_id = ${payload.userId}
+        AND md.user_id = ${payload.userId} 
     )
 
     ORDER BY message.created_at DESC
@@ -214,15 +216,15 @@ WHERE c.id IN (
     SELECT chat_id
     FROM chat_member
     WHERE member_id = ${payload.userId}
-)
+) 
 
-AND u.id != ${payload.userId}
+AND u.id != ${payload.userId} 
 
 ORDER BY c.id, m.created_at DESC NULLS LAST;
 
 `;
 
-        // console.log(chats, "chatsssssss");
+        console.log(chats, "chatsssssss");
 
         if (!chats) {
           throw new Error();

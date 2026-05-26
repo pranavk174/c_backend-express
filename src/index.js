@@ -97,40 +97,47 @@ io.on("connection", (socket) => {
     io.emit("message", data);
   });
 
-  socket.on(SEND_MESSAGE, (data) => {
+  socket.on(SEND_MESSAGE, (data, callback) => {
     console.log(data, "new messageeeeee");
 
-    sendMessage(socket, payload, data);
+    sendMessage(io, payload, data, callback);
   });
 
   socket.on(CHAT_JOINED, (data) => {
     // console.log("chat joined in event user .....", data);
+    const { chat_id } = data;
     joinChat(data);
+
+    socket.join(`chat:${chat_id}`);
+    // socket.join(chat_id);
+
     const members = getSocketmembers(payload.userId);
     console.log(members, "members....");
     socket.to(members).emit(ONLINE_USERS, Array.from(onlineUsers));
     // seenMessage(socket, payload, data);
   });
 
-  socket.on(MESSAGE_SEEN, (data) => {
+  socket.on(MESSAGE_SEEN, (data,callback) => {
     console.log("message seenbd", data);
-    seenMessage(socket, payload, data);
+    seenMessage(io, payload, data,callback);
   });
 
   socket.on(CHAT_LEAVED, (data) => {
     // console.log("chat ;eaft. user .....", data);
+    const { chat_id } = data;
     leaveChat(data);
+    socket.leave(`chat:${chat_id}`);
   });
 
-  socket.on(REPLY_MESSAGE, (data) => {
+  socket.on(REPLY_MESSAGE, (data, callback) => {
     console.log(data, "new reply messageeeeee");
-    replyMessage(socket, payload, data);
+    replyMessage(io, payload, data, callback);
   });
 
-  socket.on(MESSAGE_REACTION, (data) => {
+  socket.on(MESSAGE_REACTION, (data,callback) => {
     console.log(data, "dataaaaaaa in reaction...");
 
-    reactMessage(socket, payload, data);
+    reactMessage(io, payload, data,callback);
   });
 
   socket.on("disconnect", () => {

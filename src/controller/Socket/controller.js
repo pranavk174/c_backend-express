@@ -1,6 +1,12 @@
 import { getSockets, userSocketIDs } from "../../utils/socket.helper.js";
 import prisma from "../../../prisma/prisma-client.js";
-import { checkMessageExists } from "../../lib/helpers.js";
+import {
+  checkMessageExists,
+  chekUserExists,
+  checkChatExists,
+  checkMemeberExists,
+} from "../../lib/helpers.js";
+
 import {
   REFETCH_CHATS,
   SEND_MESSAGE,
@@ -10,7 +16,7 @@ import {
   ERROR,
   MESSAGE_SEEN,
 } from "../../utils/events.js";
-export const sendMessage = async (socket, payload, data) => {
+export const sendMessage = async (socket, payload, data, callback) => {
   console.log(data, "new messageeeeee");
 
   const { content, media, chat_ids, reciever_ids } = data;
@@ -18,11 +24,11 @@ export const sendMessage = async (socket, payload, data) => {
     (!content && !media) ||
     (chat_ids && chat_ids.length < 1 && reciever_ids && reciever_ids.length < 1)
   ) {
-    return {
+    return callback({
       message: "Data is missing...",
       status: 400,
       success: false,
-    };
+    });
   }
 
   // if(reciever_ids && reciever_ids.incldes(payload.userID))
@@ -118,7 +124,7 @@ export const sendMessage = async (socket, payload, data) => {
         receiverSocketId,
       );
 
-      socket.to(receiverSocketId).emit(REFETCH_CHATS, addMessage);
+      socket.to(`chat:${chat_ids[0]}`).emit(REFETCH_CHATS, addMessage);
     }
 
     console.log(addMessage, "chatiddddd");
@@ -128,17 +134,25 @@ export const sendMessage = async (socket, payload, data) => {
   } catch (error) {
     console.log(error);
     socket.emit(ERROR, error.message);
-    return;
+    return callback({
+      success: false,
+      error: error.message,
+      status: 500,
+    });
   }
 };
 
-export const replyMessage = async (socket, payload, data) => {
+export const replyMessage = async (socket, payload, data, callback) => {
   console.log(data, "new reply messageeeeee");
 
   const { message_ids, chat_ids, content, media, reciever_ids } = data;
   if (message_ids.length !== 1 || (!content && !media)) {
     socket.emit(ERROR, "Data is Missing");
-    return;
+    return callback({
+      message: "Data is missing...",
+      status: 400,
+      success: false,
+    });
   }
 
   try {
@@ -193,24 +207,28 @@ export const replyMessage = async (socket, payload, data) => {
         userSocketIDs,
         receiverSocketId,
       );
-      socket.to(receiverSocketId).emit(NEW_MESSAGE, updated);
+      socket.to(`chat:${chat_ids[0]}`).emit(NEW_MESSAGE, updated);
     }
 
-    socket.emit(REFETCH_CHATS, updated);
+    socket.to(`chat:${chat_ids[0]}`).emit(REFETCH_CHATS, updated);
 
-    return {
+    return callback({
       message: "Message Replied successfully",
       status: 201,
       success: true,
-    };
+    });
   } catch (error) {
     console.log(error, "err in reply....");
     socket.emit(ERROR, error.message);
-    return;
+    return callback({
+      message: error.message,
+      status: 400,
+      success: false,
+    });
   }
 };
 
-export const reactMessage = async (socket, payload, data) => {
+export const reactMessage = async (socket, payload, data, callback) => {
   const { message_ids, chat_ids, reciever_ids, react_id: reaction_id } = data;
   console.log(data, "dataaaaaa");
   if (!message_ids.length > 0 || !reaction_id) {
@@ -218,11 +236,11 @@ export const reactMessage = async (socket, payload, data) => {
 
     socket.emit(ERROR, "data is missing");
 
-    return {
+    return callback({
       message: "data is Missing",
       success: false,
       status: 400,
-    };
+    });
   }
 
   const message_id = message_ids[0];
@@ -278,7 +296,7 @@ updated_at = CURRENT_TIMESTAMP returning *;
         userSocketIDs,
         receiverSocketId,
       );
-      socket.to(receiverSocketId).emit(
+      socket.to(`chat:${chat_ids[0]}`).emit(
         MESSAGE_REACTION,
         (data = {
           message_id: updated[0].message_id,
@@ -297,25 +315,25 @@ updated_at = CURRENT_TIMESTAMP returning *;
   } catch (error) {
     console.log("error in reactiin", error);
     socket.emit(ERROR, error.message);
-    // return {
-    //   message: "Some thing went wrong",
-    //   ststu: 500,
-    //   success: false,
-    //   error: error.message,
-    // };
+
+    return callback({
+      message: "Some thing went wrong",
+      ststu: 500,
+      success: false,
+      error: error.message,
+    });
   }
 };
 
-export const seenMessage = async (socket, payload, data) => {
-  const { message_ids, chat_ids, reciever_id } = data;
+export const seenMessage = async (socket, payload, data, callback) => {
+  const { message_ids, chat_id, reciever_id } = data;
   console.log(data, "dataaaaaaaaaaa");
   if (message_ids && message_ids.length < 1) {
-    return null;
-    // return {
-    //   message: "Message id is Missing",
-    //   status: 400,
-    //   success: false,
-    // };
+    return callback({
+      message: "Message id is Missing",
+      status: 400,
+      success: false,
+    });
   }
 
   try {
@@ -350,23 +368,23 @@ export const seenMessage = async (socket, payload, data) => {
 
       console.log(data, "dartaaa vent");
       // socket.to(receiverSocketId).emit(MESSAGE_SEEN, data);
-      socket.to(receiverSocketId).emit(MESSAGE_SEEN, data);
+      socket.to(`chat:${chat_id}`).emit(MESSAGE_SEEN, data);
     }
 
     // console.log(seen, "seend messagesssss");
 
-    return {
+    return callback({
       message: "Successfully Seen message",
       status: 201,
       success: true,
-    };
+    });
   } catch (error) {
     console.log(error, "error ");
-    return {
+    return callback({
       message: "Something went wrong",
       status: 500,
       success: false,
       error: error.message,
-    };
+    });
   }
 };

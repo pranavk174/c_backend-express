@@ -33,10 +33,15 @@ const userResolvers = {
           throw new Error();
         }
 
+        console.log(data, "userssss");
+
         return {
           message: "successfully retrived",
           status: 200,
-          data,
+          data: {
+            _responseType: "User",
+            ...data,
+          },
           success: true,
         };
       } catch (error) {
