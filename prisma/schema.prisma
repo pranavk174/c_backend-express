@@ -59,11 +59,9 @@ model block {
   reason                             String?   @db.VarChar(300)
   blocked_at                         DateTime? @default(now()) @db.Timestamptz(6)
   blocked                            Boolean   @default(false)
+  unblocked_at                       DateTime? @db.Timestamp(6)
   users_block_user_idTousers         users     @relation("block_user_idTousers", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "block_ibfk_1")
   users_block_blocked_user_idTousers users     @relation("block_blocked_user_idTousers", fields: [blocked_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "block_ibfk_2")
-
-  @@unique([user_id, blocked_user_id])
-  @@unique([user_id, blocked_user_id], map: "uniq_block")
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.

@@ -43,20 +43,20 @@ const chatResolver = {
 
       try {
         const chats = await prisma.$queryRaw`
-      SELECT 
-      m.id,
-    
-CASE
 
+SELECT 
+    m.id,
 
-    WHEN md.message_id = m.id
-     AND md.user_id = ${payload.userId}
-    THEN 'Deleted message'
+    CASE
+        WHEN md.message_id = m.id
+         AND md.user_id = ${payload.userId}
+        THEN 'Deleted message'
 
-    ELSE m.content
-
+        ELSE m.content
     END AS content,
-a.url as preview,
+
+    a.url as preview,
+
     m.chat_id,
     m.sender_id,
     m.created_at,
@@ -64,58 +64,89 @@ a.url as preview,
     m.is_edited,
     m.is_deleted,
     m.reply_to_message_id as reply_to_message_id,
+
     COALESCE(seen.seen_users, '{}') as seen_users,
-  COALESCE(r.reactions, '[]'::json) as reactions
+
+    COALESCE(r.reactions, '[]'::json) as reactions
+
 FROM message m
+
 LEFT JOIN LATERAL (
 
-   SELECT ARRAY_AGG(sm.user_id) as seen_users
+    SELECT ARRAY_AGG(sm.user_id) as seen_users
 
-   FROM seen_message sm
+    FROM seen_message sm
 
-   WHERE sm.message_id = m.id
+    WHERE sm.message_id = m.id
 
 ) seen ON true
 
-left join message_delete_for_me  md
-on m.id = md.message_id
+LEFT JOIN message_delete_for_me md
+ON m.id = md.message_id
 
-
-left join attachment a
-on a.message_id = m.id
+LEFT JOIN attachment a
+ON a.message_id = m.id
 
 LEFT JOIN LATERAL (
 
     SELECT json_agg(
         json_build_object(
             'react_id', mr.reaction_id,
-
             'user_id', ru.id
-
-
         )
     ) as reactions
 
     FROM message_reaction mr
 
     JOIN users ru
-        ON ru.id = mr.user_id
+    ON ru.id = mr.user_id
 
     WHERE mr.message_id = m.id
 
 ) r ON true
 
-
 WHERE 
-    m.chat_id = ${chat_id} and m.is_deleted = false
+    m.chat_id = ${chat_id}
+
+    AND m.is_deleted = false
+
+    AND NOT EXISTS (
+
+        SELECT 1
+
+        FROM block b
+
+        WHERE
+        (
+            (
+                b.user_id = ${payload.userId}
+                AND b.blocked_user_id = m.sender_id
+            )
+
+            OR
+
+            (
+                b.user_id = m.sender_id
+                AND b.blocked_user_id = ${payload.userId}
+            )
+        )
+
+        AND m.created_at >= b.blocked_at
+
+        AND (
+            b.unblocked_at IS NULL
+            OR
+            m.created_at <= b.unblocked_at
+        )
+    )
 
     ${cursor ? Prisma.sql`AND m.id < ${parsedCursor}` : Prisma.empty}
 
 ORDER BY m.id DESC
-LIMIT  ${limit}
 
+LIMIT ${limit}
 
-        `;
+`;
 
         // console.dir(chats, { depth: null });
 
@@ -163,19 +194,37 @@ SELECT DISTINCT ON (c.id)
 
     u.id AS user_id,
     u.name,
-    u.profile_pic,
-    u.bio as bio,
+
+    CASE 
+        WHEN active_block.user_id = ${payload.userId}
+        THEN true
+
+        ELSE false::boolean
+    END as blocked,
+
+    CASE 
+        WHEN active_block.blocked_user_id = ${payload.userId}
+        THEN 'https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png'
+
+        ELSE u.profile_pic
+    END as profile_pic,
+
+    CASE 
+        WHEN active_block.blocked_user_id = ${payload.userId}
+        THEN ''
+
+        ELSE u.bio
+    END as bio,
+
     u.email as email,
     u.mobile as mobile,
 
     m.id AS last_message_id,
 
     CASE 
-        
-
         WHEN m.content IS NULL 
         THEN a.file_type::text
-        
+
         ELSE m.content
     END AS last_message,
 
@@ -184,47 +233,109 @@ SELECT DISTINCT ON (c.id)
 FROM chat c
 
 JOIN chat_member cm
-    ON cm.chat_id = c.id
+ON cm.chat_id = c.id
 
 JOIN users u
-    ON u.id = cm.member_id
+ON u.id = cm.member_id
 
 LEFT JOIN LATERAL (
 
     SELECT *
-    FROM message message
+    FROM block b
 
-    WHERE message.chat_id = c.id and message.is_deleted = false  
+    WHERE
+    (
+        (
+            b.user_id = ${payload.userId}
+            AND b.blocked_user_id = u.id
+        )
 
-    AND NOT EXISTS (
-        SELECT 1
-        FROM message_delete_for_me md
-        WHERE md.message_id = message.id
-        AND md.user_id = ${payload.userId} 
+        OR
+
+        (
+            b.user_id = u.id
+            AND b.blocked_user_id = ${payload.userId}
+        )
     )
 
+    AND b.unblocked_at IS NULL
+
+    ORDER BY b.blocked_at DESC
+
+    LIMIT 1
+
+) active_block ON true
+
+LEFT JOIN LATERAL (
+
+    SELECT *
+
+    FROM message message
+
+    WHERE 
+        message.chat_id = c.id 
+        AND message.is_deleted = false
+
+        AND NOT EXISTS (
+
+            SELECT 1
+
+            FROM block b
+
+            WHERE
+            (
+                (
+                    b.user_id = ${payload.userId}
+                    AND b.blocked_user_id = message.sender_id
+                )
+
+                OR
+
+                (
+                    b.user_id = message.sender_id
+                    AND b.blocked_user_id = ${payload.userId}
+                )
+            )
+
+            AND message.created_at >= b.blocked_at
+
+            AND (
+                b.unblocked_at IS NULL
+                OR
+                message.created_at <= b.unblocked_at
+            )
+        )
+
+        AND NOT EXISTS (
+            SELECT 1
+            FROM message_delete_for_me md
+            WHERE md.message_id = message.id
+            AND md.user_id = ${payload.userId}
+        )
+
     ORDER BY message.created_at DESC
+
     LIMIT 1
 
 ) m ON true
 
 LEFT JOIN attachment a
-    ON a.message_id = m.id
-    AND m.content IS NULL
+ON a.message_id = m.id
+AND m.content IS NULL
 
 WHERE c.id IN (
     SELECT chat_id
     FROM chat_member
     WHERE member_id = ${payload.userId}
-) 
+)
 
-AND u.id != ${payload.userId} 
+AND u.id != ${payload.userId}
 
 ORDER BY c.id, m.created_at DESC NULLS LAST;
 
 `;
 
-        console.log(chats, "chatsssssss");
+        // console.log(chats, "chatsssssss");
 
         if (!chats) {
           throw new Error();
@@ -239,6 +350,7 @@ ORDER BY c.id, m.created_at DESC NULLS LAST;
           },
         };
       } catch (error) {
+        console.log(error, "errorrrr ");
         return {
           message: "Something went wrong",
           status: 500,

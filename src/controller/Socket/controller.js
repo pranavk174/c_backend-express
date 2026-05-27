@@ -113,16 +113,16 @@ export const sendMessage = async (socket, payload, data, callback) => {
       throw new Error();
     }
 
-    console.log(reciever_ids[0], "clg..... recievr id...");
+    // console.log(reciever_ids[0], "clg..... recievr id...");
 
     const receiverSocketId = userSocketIDs.get(String(reciever_ids[0]));
     addMessage[0] = { ...addMessage[0], seen_users: [] };
     if (receiverSocketId) {
-      console.log(
-        "yes condition....................",
-        userSocketIDs,
-        receiverSocketId,
-      );
+      // console.log(
+      //   "yes condition....................",
+      //   userSocketIDs,
+      //   receiverSocketId,
+      // );
 
       socket.to(`chat:${chat_ids[0]}`).emit(REFETCH_CHATS, addMessage);
     }
@@ -198,15 +198,15 @@ export const replyMessage = async (socket, payload, data, callback) => {
         preview: addMedia[0].url,
       }));
     }
-    console.log(updated, "dadasdsdsad");
+    // console.log(updated, "dadasdsdsad");
 
     const receiverSocketId = getSockets(reciever_ids[0]);
     if (receiverSocketId) {
-      console.log(
-        "yes condition....................",
-        userSocketIDs,
-        receiverSocketId,
-      );
+      // console.log(
+      //   "yes condition....................",
+      //   userSocketIDs,
+      //   receiverSocketId,
+      // );
       socket.to(`chat:${chat_ids[0]}`).emit(NEW_MESSAGE, updated);
     }
 
@@ -230,7 +230,7 @@ export const replyMessage = async (socket, payload, data, callback) => {
 
 export const reactMessage = async (socket, payload, data, callback) => {
   const { message_ids, chat_ids, reciever_ids, react_id: reaction_id } = data;
-  console.log(data, "dataaaaaa");
+  // console.log(data, "dataaaaaa");
   if (!message_ids.length > 0 || !reaction_id) {
     console.log("issue here......", !message_ids.length > 0, !reaction_id);
 
@@ -287,15 +287,15 @@ updated_at = CURRENT_TIMESTAMP returning *;
       throw new Error("Reaction Failed");
     }
 
-    console.log(updated, "updated reaction");
+    // console.log(updated, "updated reaction");
 
     const receiverSocketId = getSockets(reciever_ids[0]);
     if (receiverSocketId) {
-      console.log(
-        "yes condition....................",
-        userSocketIDs,
-        receiverSocketId,
-      );
+      // console.log(
+      //   "yes condition....................",
+      //   userSocketIDs,
+      //   receiverSocketId,
+      // );
       socket.to(`chat:${chat_ids[0]}`).emit(
         MESSAGE_REACTION,
         (data = {
@@ -327,7 +327,7 @@ updated_at = CURRENT_TIMESTAMP returning *;
 
 export const seenMessage = async (socket, payload, data, callback) => {
   const { message_ids, chat_id, reciever_id } = data;
-  console.log(data, "dataaaaaaaaaaa");
+  // console.log(data, "dataaaaaaaaaaa");
   if (message_ids && message_ids.length < 1) {
     return callback({
       message: "Message id is Missing",
@@ -339,7 +339,7 @@ export const seenMessage = async (socket, payload, data, callback) => {
   try {
     const messageData = await checkMessageExists(prisma, message_ids);
 
-    console.log(message_ids, "message idsss.");
+    // console.log(message_ids, "message idsss.");
 
     const seen = await prisma.seen_message.createManyAndReturn({
       data: message_ids.map((m) => ({
@@ -354,11 +354,11 @@ export const seenMessage = async (socket, payload, data, callback) => {
 
     const receiverSocketId = getSockets(reciever_id);
     if (receiverSocketId) {
-      console.log(
-        "yes condition....................",
-        userSocketIDs,
-        receiverSocketId,
-      );
+      // console.log(
+      //   "yes condition....................",
+      //   userSocketIDs,
+      //   receiverSocketId,
+      // );
 
       const data = seen.map((d) => ({
         message_id: d.message_id,
@@ -366,7 +366,7 @@ export const seenMessage = async (socket, payload, data, callback) => {
         seen_at: d.seen_at,
       }));
 
-      console.log(data, "dartaaa vent");
+      // console.log(data, "dartaaa vent");
       // socket.to(receiverSocketId).emit(MESSAGE_SEEN, data);
       socket.to(`chat:${chat_id}`).emit(MESSAGE_SEEN, data);
     }

@@ -70,6 +70,7 @@ io.use(async (socket, next) => {
 
     const payload = await validateCookie(token);
 
+    console.log(payload , "middleware payloaddd")
     socket.user = payload;
 
     next();
@@ -80,12 +81,12 @@ io.use(async (socket, next) => {
 
 // app.use("/api/v1", router);
 io.on("connection", (socket) => {
-  // console.log("User connected:", socket.user, socket.id);
+  console.log("User connected:", socket.user, socket.id);
   const payload = socket.user;
   userSocketIDs.set(payload.userId.toString(), socket.id);
   onlineUsers.add(payload.userId.toString());
 
-  sendUsers(socket);
+  sendUsers(io, payload);
 
   // console.log(userSocketIDs, "use socet idssss");
   // User ka socketId map mein store karo
@@ -98,46 +99,50 @@ io.on("connection", (socket) => {
   });
 
   socket.on(SEND_MESSAGE, (data, callback) => {
-    console.log(data, "new messageeeeee");
+    // console.log(data, "new messageeeeee");
 
     sendMessage(io, payload, data, callback);
   });
 
-  socket.on(CHAT_JOINED, (data) => {
+  socket.on(CHAT_JOINED, (data, callback) => {
     // console.log("chat joined in event user .....", data);
+
     const { chat_id } = data;
-    joinChat(data);
+    joinChat(socket, data, callback);
 
-    socket.join(`chat:${chat_id}`);
-    // socket.join(chat_id);
+    // const room = io.sockets.adapter.rooms;
 
-    const members = getSocketmembers(payload.userId);
-    console.log(members, "members....");
-    socket.to(members).emit(ONLINE_USERS, Array.from(onlineUsers));
+    // // total members
+    // const membersCount = room ? room.size : 0;
+
+    // console.log("Members:", membersCount, room);
     // seenMessage(socket, payload, data);
   });
 
-  socket.on(MESSAGE_SEEN, (data,callback) => {
+  socket.on(MESSAGE_SEEN, (data, callback) => {
     console.log("message seenbd", data);
-    seenMessage(io, payload, data,callback);
+    seenMessage(io, payload, data, callback);
   });
 
-  socket.on(CHAT_LEAVED, (data) => {
+  socket.on(CHAT_LEAVED, (data, callback) => {
     // console.log("chat ;eaft. user .....", data);
     const { chat_id } = data;
-    leaveChat(data);
-    socket.leave(`chat:${chat_id}`);
+    leaveChat(socket, data, callback);
+
+    console.log(" socket leavedddddddd");
   });
 
   socket.on(REPLY_MESSAGE, (data, callback) => {
+    const { chat_id } = data;
     console.log(data, "new reply messageeeeee");
+
     replyMessage(io, payload, data, callback);
   });
 
-  socket.on(MESSAGE_REACTION, (data,callback) => {
+  socket.on(MESSAGE_REACTION, (data, callback) => {
     console.log(data, "dataaaaaaa in reaction...");
 
-    reactMessage(io, payload, data,callback);
+    reactMessage(io, payload, data, callback);
   });
 
   socket.on("disconnect", () => {
@@ -146,7 +151,7 @@ io.on("connection", (socket) => {
     userSocketIDs.delete(String(payload.userId));
 
     // socket.emit(ONLINE_USERS, Array.from(onlineUsers));
-    sendUsers(io);
+    sendUsers(io,payload);
   });
 });
 

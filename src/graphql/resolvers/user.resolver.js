@@ -7,7 +7,7 @@ import jwt from "jsonwebtoken";
 const userResolvers = {
   ResponseData: {
     __resolveType(obj) {
-      console.log(obj, "object dataaa");
+      // console.log(obj, "object dataaa");
       if (obj._responseType === "verifyOtpData") {
         return "verifyOtpData";
       }
@@ -33,7 +33,7 @@ const userResolvers = {
           throw new Error();
         }
 
-        console.log(data, "userssss");
+        // console.log(data, "userssss");
 
         return {
           message: "successfully retrived",
@@ -765,12 +765,11 @@ const userResolvers = {
           throw new Error("User not found");
         }
 
-        const existing = await prisma.block.findUnique({
+        const existing = await prisma.block.findFirst({
           where: {
-            user_id_blocked_user_id: {
-              user_id: payload.userId,
-              blocked_user_id,
-            },
+            user_id: payload.userId,
+            blocked_user_id,
+            unblocked_at: null,
           },
         });
 
@@ -782,19 +781,8 @@ const userResolvers = {
           };
         }
 
-        const blocked = await prisma.block.upsert({
-          where: {
-            user_id_blocked_user_id: {
-              blocked_user_id,
-              user_id: payload.userId,
-            },
-          },
-          update: {
-            blocked: true,
-            reason,
-            blocked_at: new Date(),
-          },
-          create: {
+        const blocked = await prisma.block.create({
+          data: {
             user_id: payload.userId,
             blocked_user_id,
             blocked: true,
@@ -843,17 +831,16 @@ const userResolvers = {
           throw new Error("User not found");
         }
 
-        const updated = await prisma.block.update({
+        const updated = await prisma.block.updateMany({
           where: {
-            user_id_blocked_user_id: {
-              blocked_user_id,
-              user_id: payload.userId,
-            },
+            user_id: payload.userId,
+            blocked_user_id,
+            unblocked_at: null,
           },
+
           data: {
             blocked: false,
-            reason: null,
-            // blocked_at: null,
+            unblocked_at: new Date(),
           },
         });
 
