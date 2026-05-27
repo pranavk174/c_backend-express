@@ -70,7 +70,7 @@ io.use(async (socket, next) => {
 
     const payload = await validateCookie(token);
 
-    console.log(payload , "middleware payloaddd")
+    // console.log(payload , "middleware payloaddd")
     socket.user = payload;
 
     next();
@@ -81,7 +81,7 @@ io.use(async (socket, next) => {
 
 // app.use("/api/v1", router);
 io.on("connection", (socket) => {
-  console.log("User connected:", socket.user, socket.id);
+  // console.log("User connected:", socket.user, socket.id);
   const payload = socket.user;
   userSocketIDs.set(payload.userId.toString(), socket.id);
   onlineUsers.add(payload.userId.toString());

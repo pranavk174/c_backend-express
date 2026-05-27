@@ -87,10 +87,10 @@ export const getSocketmembers = (id) => {
 };
 
 export const sendUsers = (socket, payload) => {
-  console.log("users online", payload);
+  // console.log("users online", payload);
 
   socket.emit(ONLINE_USERS, Array.from(onlineUsers));
   const members = getSocketmembers(payload.userId);
   // socket.to(members).emit(ONLINE_USERS, Array.from(onlineUsers));
-  console.log(members, "memberssss");
+  // console.log(members, "memberssss");
 };

@@ -33,7 +33,7 @@ const userResolvers = {
           throw new Error();
         }
 
-        // console.log(data, "userssss");
+        console.log(data, "userssss");
 
         return {
           message: "successfully retrived",
@@ -404,6 +404,7 @@ const userResolvers = {
           mobile,
           bio = "Hey! There I am using chat App",
           profile_pic = "",
+          cover_pic = null,
         },
       },
     ) => {
@@ -487,6 +488,7 @@ const userResolvers = {
               user_name,
               bio,
               profile_pic,
+              cover_pic,
             },
           }),
           prisma.register.delete({

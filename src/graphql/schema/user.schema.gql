@@ -15,6 +15,7 @@ type User implements Email {
   bio: String
   mobile: String!
   profile_pic: String
+  cover_pic: String
 }
 
 input UserInput {
@@ -25,11 +26,13 @@ input UserInput {
   bio: String
   mobile: String!
   profile_pic: String
+  cover_pic: String
 }
 
 input UpdateUserInput {
   name: String
   bio: String
+  cover_pic: String
   profile_pic: String
 }
 
