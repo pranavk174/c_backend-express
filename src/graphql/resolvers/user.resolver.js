@@ -33,7 +33,7 @@ const userResolvers = {
           throw new Error();
         }
 
-        console.log(data, "userssss");
+        // console.log(data, "userssss");
 
         return {
           message: "successfully retrived",

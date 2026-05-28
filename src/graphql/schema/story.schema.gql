@@ -10,7 +10,7 @@ type Story {
   text_data: String
   content: String
   created_at: String!
-  updated_at: String!
+  # updated_at: String!
   expires_at: String!
 }
 

@@ -147,11 +147,11 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     onlineUsers.delete(payload.userId.toString());
-    console.log("User disconnected:", payload.userId, socket.id, onlineUsers);
+    // console.log("User disconnected:", payload.userId, socket.id, onlineUsers);
     userSocketIDs.delete(String(payload.userId));
 
     // socket.emit(ONLINE_USERS, Array.from(onlineUsers));
-    sendUsers(io,payload);
+    sendUsers(io, payload);
   });
 });
 

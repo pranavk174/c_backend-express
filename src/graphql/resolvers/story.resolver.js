@@ -257,6 +257,7 @@ GROUP BY s.id;
           status: 200,
           success: true,
           data: {
+            __resolveType: "Storiesdata",
             stories,
           },
         };
@@ -323,6 +324,7 @@ GROUP BY s.id;
           success: true,
         };
       } catch (error) {
+        console.log(error, "errrorrrr in creating story...");
         return {
           message: "Something went wrong",
           status: 500,
