@@ -1,3 +1,5 @@
+scalar BigInt
+
 type Query {
   _empty: String
 }

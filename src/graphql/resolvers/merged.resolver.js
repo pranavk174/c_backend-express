@@ -2,7 +2,10 @@ import userResolver from "../resolvers/user.resolver.js";
 import Storyresolver from "../resolvers/story.resolver.js";
 import { privacyResolvers } from "./privacy.resolver.js";
 import chatResolver from "./chat.resolver.js";
+import { GraphQLBigInt } from "graphql-scalars";
 const mergedResolvers = {
+  BigInt: GraphQLBigInt,
+
   Query: {
     ...userResolver.Query,
     ...Storyresolver.Query,

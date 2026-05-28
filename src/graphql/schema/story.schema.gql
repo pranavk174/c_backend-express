@@ -10,12 +10,31 @@ type Story {
   text_data: String
   content: String
   created_at: String!
+  name: String!
+  profile_pic: String
   # updated_at: String!
+  likes_count: BigInt!
   expires_at: String!
 }
 
+type StoryContent {
+  id: Int!
+  text_data: String!
+  content: String!
+  created_at: String!
+  expires_at: String!
+  likes_count: Int!
+}
+
+type UserStories {
+  user_id: Int!
+  name: String!
+  profile_pic: String
+  stories: [StoryContent]
+}
+
 type StoryData {
-  story: Story
+  story: UserStories
 }
 
 input storyLikeInput {
@@ -25,7 +44,7 @@ input storyLikeInput {
 }
 
 type StoriesData {
-  stories: [Story!]!
+  stories: [UserStories!]!
 }
 
 union storyResponseData = StoriesData | StoryData

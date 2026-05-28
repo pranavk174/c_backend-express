@@ -73,192 +73,277 @@ GROUP BY s.id;
     getAllStories: async (_, __, context) => {
       try {
         const payload = context.user;
+        //         const stories = await prisma.$queryRaw`
+        //    SELECT
+        //         s.*, u.name,
+
+        //         CASE
+        //         WHEN u.profile_pic IS NULL THEN NULL
+        //         ELSE u.profile_pic
+        //       END AS profile_pic,
+
+        //         COUNT(DISTINCT sl.story_id) AS likes_count
+
+        //     FROM story s
+
+        //     LEFT JOIN story_likes sl
+        //     ON sl.story_id = s.id
+
+        //     left join users u on
+        //     u.id = s.user_id
+
+        //     WHERE
+
+        //         -- =====================================
+        //         -- STORY BASIC FILTERS
+        //         -- =====================================
+
+        //         s.is_deleted = false
+
+        //         AND s.expires_at > NOW()
+
+        //         -- =====================================
+        //         -- BLOCK CHECK
+        //         -- =====================================
+
+        //         AND NOT EXISTS (
+
+        //             SELECT 1
+
+        //             FROM block bu
+
+        //             WHERE
+
+        //             (
+        //                 bu.user_id = s.user_id
+        //                 AND bu.blocked_user_id = ${payload.userId}
+        //             )
+
+        //             OR
+
+        //             (
+        //                 bu.user_id = ${payload.userId}
+        //                 AND bu.blocked_user_id = s.user_id
+        //             )
+
+        //         )
+
+        //         -- =====================================
+        //         -- PRIVACY LOGIC
+        //         -- =====================================
+
+        //         AND (
+
+        //             -- =================================
+        //             -- OWN STORIES
+        //             -- =================================
+
+        //             s.user_id = ${payload.userId}
+
+        //             -- =================================
+        //             -- PUBLIC STORIES
+        //             -- =================================
+
+        //             OR EXISTS (
+
+        //                 SELECT 1
+
+        //                 FROM privacy_settings ps
+
+        //                 WHERE
+
+        //                 ps.user_id = s.user_id
+
+        //                 AND ps.entity_type :: text = 'STORY'
+
+        //                 AND ps.privacy_type ::text = 'PUBLIC'
+
+        //             )
+
+        //             -- =================================
+        //             -- ONLY ME
+        //             -- =================================
+
+        //             OR EXISTS (
+
+        //                 SELECT 1
+
+        //                 FROM privacy_settings ps
+
+        //                 WHERE
+
+        //                 ps.user_id = s.user_id
+
+        //                 AND ps.entity_type :: text = 'STORY'
+
+        //                 AND ps.privacy_type  :: text = 'ONLY_ME'
+
+        //                 AND s.user_id = ${payload.userId}
+
+        //             )
+
+        //             -- =================================
+        //             -- CUSTOM
+        //             -- =================================
+
+        //             OR EXISTS (
+
+        //                 SELECT 1
+
+        //                 FROM privacy_settings ps
+
+        //                 JOIN privacy_user pu
+        //                 ON pu.privacy_id = ps.privacy_id
+
+        //                 WHERE
+
+        //                 ps.user_id = s.user_id
+
+        //                 AND ps.entity_type  :: text = 'STORY'
+
+        //                 AND ps.privacy_type  :: text = 'CUSTOM'
+
+        //                 AND pu.target_user_id = ${payload.userId}
+
+        //             )
+
+        //             -- =================================
+        //             -- EXCEPT USERS
+        //             -- =================================
+
+        //             OR (
+
+        //                 EXISTS (
+
+        //                     SELECT 1
+
+        //                     FROM privacy_settings ps
+
+        //                     WHERE
+
+        //                     ps.user_id = s.user_id
+
+        //                     AND ps.entity_type  :: text = 'STORY'
+
+        //                     AND ps.privacy_type  :: text = 'EXCEPT_USERS'
+
+        //                 )
+
+        //                 AND NOT EXISTS (
+
+        //                     SELECT 1
+
+        //                     FROM privacy_settings ps
+
+        //                     JOIN privacy_user pu
+        //                     ON pu.privacy_id = ps.privacy_id
+
+        //                     WHERE
+
+        //                     ps.user_id = s.user_id
+
+        //                     AND ps.entity_type  :: text = 'STORY'
+
+        //                     AND ps.privacy_type  :: text = 'EXCEPT_USERS'
+
+        //                     AND pu.target_user_id = ${payload.userId}
+
+        //                 )
+
+        //             )
+
+        //         )
+
+        //     GROUP BY s.id,u.name,u.profile_pic
+
+        //     ORDER BY s.created_at DESC;
+        // `;
+
         const stories = await prisma.$queryRaw`
-   SELECT 
-        s.*,
+SELECT 
+    s.*,
+    u.name,
+    u.profile_pic,
 
-        COUNT(DISTINCT sl.story_id) AS likes_count
+    COUNT(DISTINCT sl.story_id) AS likes_count
 
-    FROM story s
+FROM story s
 
-    LEFT JOIN story_likes sl
-    ON sl.story_id = s.id
+LEFT JOIN story_likes sl
+ON sl.story_id = s.id
 
-    WHERE
+LEFT JOIN users u
+ON u.id = s.user_id
 
-        -- =====================================
-        -- STORY BASIC FILTERS
-        -- =====================================
+WHERE
 
-        s.is_deleted = false
+    -- active stories
+    s.is_deleted = false
 
-        AND s.expires_at > NOW()
+    AND s.expires_at > NOW()
 
-        -- =====================================
-        -- BLOCK CHECK
-        -- =====================================
+    -- block logic
+    AND NOT EXISTS (
 
-        AND NOT EXISTS (
+        SELECT 1
+        FROM block b
 
-            SELECT 1
+        WHERE
 
-            FROM block bu
-
-            WHERE
-
-            (
-                bu.user_id = s.user_id
-                AND bu.blocked_user_id = ${payload.userId}
-            )
-
-            OR
-
-            (
-                bu.user_id = ${payload.userId}
-                AND bu.blocked_user_id = s.user_id
-            )
-
+        (
+            b.user_id = s.user_id
+            AND b.blocked_user_id = ${payload.userId}
         )
 
-        -- =====================================
-        -- PRIVACY LOGIC
-        -- =====================================
+        OR
 
-        AND (
-
-            -- =================================
-            -- OWN STORIES
-            -- =================================
-
-            s.user_id = ${payload.userId}
-
-            -- =================================
-            -- PUBLIC STORIES
-            -- =================================
-
-            OR EXISTS (
-
-                SELECT 1
-
-                FROM privacy_settings ps
-
-                WHERE
-
-                ps.user_id = s.user_id
-
-                AND ps.entity_type :: text = 'STORY'
-
-                AND ps.privacy_type ::text = 'PUBLIC'
-
-            )
-
-            -- =================================
-            -- ONLY ME
-            -- =================================
-
-            OR EXISTS (
-
-                SELECT 1
-
-                FROM privacy_settings ps
-
-                WHERE
-
-                ps.user_id = s.user_id
-
-                AND ps.entity_type :: text = 'STORY'
-
-                AND ps.privacy_type  :: text = 'ONLY_ME'
-
-                AND s.user_id = ${payload.userId}
-
-            )
-
-            -- =================================
-            -- CUSTOM
-            -- =================================
-
-            OR EXISTS (
-
-                SELECT 1
-
-                FROM privacy_settings ps
-
-                JOIN privacy_user pu
-                ON pu.privacy_id = ps.privacy_id
-
-                WHERE
-
-                ps.user_id = s.user_id
-
-                AND ps.entity_type  :: text = 'STORY'
-
-                AND ps.privacy_type  :: text = 'CUSTOM'
-
-                AND pu.target_user_id = ${payload.userId}
-
-            )
-
-            -- =================================
-            -- EXCEPT USERS
-            -- =================================
-
-            OR (
-
-                EXISTS (
-
-                    SELECT 1
-
-                    FROM privacy_settings ps
-
-                    WHERE
-
-                    ps.user_id = s.user_id
-
-                    AND ps.entity_type  :: text = 'STORY'
-
-                    AND ps.privacy_type  :: text = 'EXCEPT_USERS'
-
-                )
-
-                AND NOT EXISTS (
-
-                    SELECT 1
-
-                    FROM privacy_settings ps
-
-                    JOIN privacy_user pu
-                    ON pu.privacy_id = ps.privacy_id
-
-                    WHERE
-
-                    ps.user_id = s.user_id
-
-                    AND ps.entity_type  :: text = 'STORY'
-
-                    AND ps.privacy_type  :: text = 'EXCEPT_USERS'
-
-                    AND pu.target_user_id = ${payload.userId}
-
-                )
-
-            )
-
+        (
+            b.user_id = ${payload.userId}
+            AND b.blocked_user_id = s.user_id
         )
 
-    GROUP BY s.id
+    )
 
-    ORDER BY s.created_at DESC;
+
+GROUP BY
+    s.id,
+    u.name,
+    u.profile_pic
+
+ORDER BY
+    s.created_at DESC;
 `;
+        const grouped = stories.reduce((acc, story) => {
+          if (!acc[story.user_id]) {
+            acc[story.user_id] = {
+              user_id: story.user_id,
+              name: story.name,
+              profile_pic: story.profile_pic,
+              isOwn: story.user_id === payload.userId,
+              stories: [],
+            };
+          }
 
-        console.log(stories, "storiesssss");
+          acc[story.user_id].stories.push({
+            id: story.id,
+            text_data: story.text_data,
+            content: story.content,
+            created_at: story.created_at,
+            expires_at: story.expires_at,
+            likes_count: Number(story.likes_count),
+          });
+
+          return acc;
+        }, {});
+
+        console.log(JSON.stringify(grouped, null, 2));
         return {
           message: "Stories retrieved successfully",
           status: 200,
           success: true,
           data: {
             __resolveType: "Storiesdata",
-            stories,
+            stories: Object.values(grouped),
           },
         };
       } catch (error) {
