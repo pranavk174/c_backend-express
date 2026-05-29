@@ -12,6 +12,7 @@ type Chats {
   chat_id: Int!
   user_id: Int!
   profile_pic: String
+  cover_pic:String
   last_message: String
   last_message_at: String
   blocked: Boolean!
@@ -46,6 +47,7 @@ type Chat {
   content: String
   seen_users: [Int]
   story_id: Int
+  story_item: String
   is_edited: Boolean!
   reply_to_message_id: Int
   is_deleted: Boolean

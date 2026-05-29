@@ -17,13 +17,23 @@ type Story {
   expires_at: String!
 }
 
+type interactions {
+  id: Int!
+  name: String!
+  seen: Boolean!
+  liked: Boolean!
+  seen_at: String!
+  liked_at: String
+  profile_pic: String
+}
+
 type StoryContent {
   id: Int!
   text_data: String!
   content: String!
   created_at: String!
-  expires_at: String!
-  likes_count: Int!
+  # expires_at: String!
+  interactions: [interactions]
 }
 
 type UserStories {

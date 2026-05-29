@@ -19,6 +19,7 @@ import {
   SEND_MESSAGE,
   ONLINE_USERS,
   MESSAGE_SEEN,
+  STORY_REPLY,
 } from "./utils/events.js";
 import cookie from "cookie";
 import { validateCookie } from "./lib/tokenvalidator.js";
@@ -37,11 +38,12 @@ import {
   seenMessage,
   sendMessage,
 } from "./controller/Socket/controller.js";
+import { replyStory } from "./controller/Socket/story.controller.js";
 // import { authMiddleware } from "./middlewares/auth.js";
 const app = express();
 const server = http.createServer(app);
 
-const io = new Server(server, {
+export const io = new Server(server, {
   cors: {
     origin: "http://localhost:3001",
     credentials: true,
@@ -144,6 +146,12 @@ io.on("connection", (socket) => {
 
     reactMessage(io, payload, data, callback);
   });
+
+  socket.on(STORY_REPLY, (data, callback) => {
+    replyStory(socket, payload, data, callback);
+  });
+
+  
 
   socket.on("disconnect", () => {
     onlineUsers.delete(payload.userId.toString());

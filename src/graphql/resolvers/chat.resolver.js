@@ -55,19 +55,65 @@ SELECT
         ELSE m.content
     END AS content,
 
-    a.url as preview,
+    CASE
+        WHEN md.message_id = m.id
+         AND md.user_id = ${payload.userId}
+        THEN null
+
+        else a.url
+    end as preview,
+
+    CASE
+    WHEN md.message_id = m.id
+     AND md.user_id = ${payload.userId}
+    THEN null
+    else m.story_id
+    end as story_id ,
+
+
 
     m.chat_id,
     m.sender_id,
+
+    CASE
+    WHEN md.message_id = m.id
+     AND md.user_id = ${payload.userId}
+    THEN NULL
+    else 
+st.content end as story_item ,
+
     m.created_at,
-    m.is_forwarded,
-    m.is_edited,
+    CASE
+    WHEN md.message_id = m.id
+     AND md.user_id = ${payload.userId}
+    THEN false
+    else 
+    m.is_forwarded end as is_forwarded,
+
+    CASE
+    WHEN md.message_id = m.id
+     AND md.user_id = ${payload.userId}
+    THEN false
+    else 
+    m.is_edited end as is_edited
+    ,
     m.is_deleted,
-    m.reply_to_message_id as reply_to_message_id,
+
+    CASE
+    WHEN md.message_id = m.id
+     AND md.user_id = ${payload.userId}
+    THEN NULL
+    else 
+    m.reply_to_message_id end as reply_to_message_id,
 
     COALESCE(seen.seen_users, '{}') as seen_users,
 
-    COALESCE(r.reactions, '[]'::json) as reactions
+    CASE
+    WHEN md.message_id = m.id
+     AND md.user_id = ${payload.userId}
+    THEN '[]'::json
+    else 
+    COALESCE(r.reactions, '[]'::json) end as reactions 
 
 FROM message m
 
@@ -80,6 +126,10 @@ LEFT JOIN LATERAL (
     WHERE sm.message_id = m.id
 
 ) seen ON true
+
+
+left join story st 
+  on st.id = m.story_id
 
 LEFT JOIN message_delete_for_me md
 ON m.id = md.message_id
@@ -148,7 +198,7 @@ LIMIT ${limit}
 
 `;
 
-        // console.dir(chats, { depth: null });
+        console.dir(chats, { depth: null });
 
         if (!chats) {
           throw new Error();
@@ -202,6 +252,7 @@ SELECT DISTINCT ON (c.id)
         ELSE false::boolean
     END as blocked,
 
+    u.cover_pic,
     CASE 
         WHEN active_block.blocked_user_id = ${payload.userId}
         THEN 'https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png'
@@ -603,17 +654,15 @@ WHERE id = ${message_id}
         console.log(messageData, "message dataaaa..._..");
 
         if (delete_type === "onlyme") {
-          const updated = await Promise.all(
-            message_ids.map(
-              (id) => prisma.$queryRaw`
-              
-                 insert into message_delete_for_me (
-            message_id, user_id
-          ) values(${id} , ${payload.userId} )
-              
-              `,
-            ),
-          );
+          const values = message_ids
+            .map((id) => `(${id}, ${payload.userId})`)
+            .join(",");
+
+          const updated = await prisma.$executeRawUnsafe(`
+          INSERT INTO message_delete_for_me
+          (message_id, user_id)
+          VALUES ${values}
+        `);
 
           if (!updated) {
             throw new Error("Message Deletion Failed");
@@ -649,6 +698,7 @@ WHERE id = ${message_id}
           success: true,
         };
       } catch (error) {
+        console.log(error, "errorrrr");
         return {
           message: "Something went Wrong",
           status: 500,
