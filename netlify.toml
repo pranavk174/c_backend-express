@@ -1,5 +1,5 @@
 [build]
-  command = "npm install && npx prisma generate"
+  command = "npm install && npx prisma db pull && npx prisma generate"
   publish = "."
 
 [build.environment]
