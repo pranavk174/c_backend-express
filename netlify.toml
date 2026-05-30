@@ -1,0 +1,6 @@
+[build]
+  command = "npm install && npx prisma generate"
+  publish = "."
+
+[build.environment]
+  NODE_VERSION = "22"
