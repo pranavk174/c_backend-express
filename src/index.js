@@ -49,9 +49,29 @@ import {
 const app = express();
 const server = http.createServer(app);
 
+const allowedOrigins = [
+  "http://localhost:3001",
+  "https://cfrontend-one.vercel.app",
+  process.env.FRONTEND_URL,
+];
+
 export const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3001",
+    origin: (origin, callback) => {
+      // Postman/mobile apps/no-origin requests
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("CORS not allowed"));
+      }
+    },
+
+    methods: ["GET", "POST"],
+
     credentials: true,
   },
 });
@@ -60,7 +80,19 @@ app.use(cookieParser());
 
 app.use(
   cors({
-    origin: "http://localhost:3001",
+    origin: (origin, callback) => {
+      // mobile apps/postman/server-side requests
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("CORS not allowed"));
+      }
+    },
+
     credentials: true,
   }),
 );
