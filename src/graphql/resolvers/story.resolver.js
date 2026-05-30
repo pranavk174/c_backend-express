@@ -343,14 +343,31 @@ SELECT
     s.*,
     u.name,
     u.profile_pic,
-    
 
-    COUNT(DISTINCT sl.story_id) AS likes_count
+     COALESCE(
+    (
+        SELECT sl.liked
+        FROM story_likes sl
+        WHERE sl.story_id = s.id
+        AND sl.user_id = ${payload.userId}
+        LIMIT 1
+    ),
+    false
+) AS liked,
+
+    EXISTS (
+        SELECT 1
+        FROM story_seen sn
+        WHERE sn.story_id = s.id
+        AND sn.user_id = ${payload.userId}
+    ) AS seen
+
+
+
 
 FROM story s
 
-LEFT JOIN story_likes sl
-ON sl.story_id = s.id
+
 
 LEFT JOIN users u
 ON u.id = s.user_id
@@ -410,6 +427,8 @@ ORDER BY
           acc[story.user_id].stories.push({
             id: story.id,
             text_data: story.text_data,
+            seen: story.seen,
+            liked: story.liked,
             content: story.content,
             created_at: story.created_at,
           });
@@ -440,7 +459,7 @@ ORDER BY
           return acc;
         }, {});
 
-        console.log(JSON.stringify(Object.values(grouped2), null, 2));
+        console.log(JSON.stringify(Object.values(stories), null, 2));
         return {
           message: "Stories retrieved successfully",
           status: 200,

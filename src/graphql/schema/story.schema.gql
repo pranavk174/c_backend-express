@@ -13,6 +13,7 @@ type Story {
   name: String!
   profile_pic: String
   # updated_at: String!
+
   likes_count: BigInt!
   expires_at: String!
 }
@@ -32,6 +33,8 @@ type StoryContent {
   text_data: String!
   content: String!
   created_at: String!
+  seen: Boolean
+  liked: Boolean
   # expires_at: String!
   interactions: [interactions]
 }

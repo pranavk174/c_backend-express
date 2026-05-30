@@ -18,6 +18,7 @@ export const FORWARD_MESSAGE = "FORWARD_MESSAGE";
 
 export const STORY_REPLY = "STORY_REPLY";
 export const STORY_SEEN = "STORY_SEEN";
+export const STORY_LIKE = "STORY_LIKE";
 
 export const MESSAGE_SEEN = "MESSAGE_SEEN";
 export const MESSAGE_DELIVERED = "MESSAGE_DELIVERED";

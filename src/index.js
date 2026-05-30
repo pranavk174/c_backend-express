@@ -20,6 +20,8 @@ import {
   ONLINE_USERS,
   MESSAGE_SEEN,
   STORY_REPLY,
+  STORY_SEEN,
+  STORY_LIKE,
 } from "./utils/events.js";
 import cookie from "cookie";
 import { validateCookie } from "./lib/tokenvalidator.js";
@@ -38,7 +40,11 @@ import {
   seenMessage,
   sendMessage,
 } from "./controller/Socket/controller.js";
-import { replyStory } from "./controller/Socket/story.controller.js";
+import {
+  likeStory,
+  replyStory,
+  seenStory,
+} from "./controller/Socket/story.controller.js";
 // import { authMiddleware } from "./middlewares/auth.js";
 const app = express();
 const server = http.createServer(app);
@@ -72,6 +78,20 @@ io.use(async (socket, next) => {
 
     const payload = await validateCookie(token);
 
+    const profile_pic = await prisma.$queryRaw`
+    
+    select 
+    
+    name,
+    case 
+    when profile_pic is NULL then null else 
+    profile_pic end as profile_pic
+    
+     from users where id = ${payload.userId}
+    `;
+
+    payload.profile_pic = profile_pic[0].profile_pic;
+    payload.name = profile_pic[0].name;
     // console.log(payload , "middleware payloaddd")
     socket.user = payload;
 
@@ -90,7 +110,7 @@ io.on("connection", (socket) => {
 
   sendUsers(io, payload);
 
-  // console.log(userSocketIDs, "use socet idssss");
+  console.log(userSocketIDs, "use socet idssss");
   // User ka socketId map mein store karo
   // Example event
   socket.on("message", (data) => {
@@ -151,7 +171,13 @@ io.on("connection", (socket) => {
     replyStory(socket, payload, data, callback);
   });
 
-  
+  socket.on(STORY_SEEN, (data, callback) => {
+    seenStory(io, payload, data, callback);
+  });
+
+  socket.on(STORY_LIKE, (data, callback) => {
+    likeStory(io, payload, data, callback);
+  });
 
   socket.on("disconnect", () => {
     onlineUsers.delete(payload.userId.toString());
