@@ -16,19 +16,19 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 22
 
       - name: Install Dependencies
         run: npm install
 
-      - name: Generate Prisma Client
-        run: npx prisma db pull && npx prisma generate
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+      - name: Create .env
+        run: |
+          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env
+          echo "DIRECT_URL=${{ secrets.DIRECT_URL }}" >> .env
+          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
 
-      # - name: Build Project
-      #   run: npm run build
+      - name: Generate Prisma Client
+        run: npx prisma generate
 
       - name: Install Netlify CLI
         run: npm install -g netlify-cli
@@ -37,7 +37,7 @@ jobs:
         run: |
           netlify deploy \
           --prod \
-          --dir=.next
+          --dir .
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
