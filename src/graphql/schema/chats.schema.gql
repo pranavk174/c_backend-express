@@ -111,4 +111,5 @@ extend type Mutation {
   reactMessage(input: ChatInput!): chatApiResponse! @auth @isChatMember
   forwardMessage(input: ChatInput!): chatApiResponse! @auth @isChatMember
   seenMessage(input: ChatInput!): chatApiResponse! @auth @isChatMember
+  setWallpaper(url:String!): chatApiResponse! @auth 
 }

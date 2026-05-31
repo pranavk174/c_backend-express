@@ -7,6 +7,7 @@ import {
   checkMessageExists,
   chekUserExists,
 } from "../../lib/helpers.js";
+import { GraphQLError } from "graphql";
 const chatResolver = {
   ChatResponse: {
     __resolveType(obj) {
@@ -1108,6 +1109,47 @@ SET
           success: false,
           error: error.message,
         };
+      }
+    },
+    setWallpaper: async (_, { url }, ctx) => {
+      if (!url || url.length === 0) {
+        return GraphQLError({
+          message: "Data Missing",
+          status: 400,
+          success: false,
+        });
+      }
+
+      try {
+        const payload = ctx.user;
+
+        const uploaded = await prisma.$queryRaw`
+        
+        INSERT INTO wallpapers (url, user_id)
+VALUES (${url}, ${payload.userId})
+
+ON CONFLICT (user_id)
+DO UPDATE SET
+    url = EXCLUDED.url,
+    created_at = CURRENT_TIMESTAMP;
+        
+        `;
+
+        if (!uploaded) {
+          throw new Error("Upload Failed in Wallpaper");
+        }
+
+        return {
+          message: "Successfully Uploaded Wallpaper",
+          success: true,
+          status: 201,
+        };
+      } catch (error) {
+        return GraphQLError({
+          message: error.message,
+          status: 500,
+          success: false,
+        });
       }
     },
   },
