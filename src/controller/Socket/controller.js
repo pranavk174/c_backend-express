@@ -127,7 +127,7 @@ export const sendMessage = async (socket, payload, data, callback) => {
       socket.to(`chat:${chat_ids[0]}`).emit(REFETCH_CHATS, addMessage);
     }
 
-    console.log(addMessage, "chatiddddd");
+    // console.log(addMessage, "chatiddddd");
     // socket.emit(REFETCH_CHATS, addMessage);
 
     // const chatData = await
@@ -385,6 +385,8 @@ export const seenMessage = async (socket, payload, data, callback) => {
       status: 500,
       success: false,
       error: error.message,
+      userId: payload,
+      message_ids,
     });
   }
 };

@@ -11,13 +11,15 @@ import { GraphQLError } from "graphql";
 const chatResolver = {
   ChatResponse: {
     __resolveType(obj) {
-      // console.log(obj, "object dataaa");
+      console.log(obj, "object dataaa");
       if (obj._responseType === "Emojis") {
         return "Emojis";
       } else if (obj._responseType === "SingleChat") {
         return "SingleChat";
       } else if (obj._responseType === "AllChats") {
         return "AllChats";
+      } else if (obj._responseType === "Wallpaper") {
+        return "Wallpaper";
       }
 
       return obj._responseType;
@@ -199,7 +201,7 @@ LIMIT ${limit}
 
 `;
 
-        console.dir(chats, { depth: null });
+        // console.dir(chats, { depth: null });
 
         if (!chats) {
           throw new Error();
@@ -438,6 +440,30 @@ ORDER BY c.id, m.created_at DESC NULLS LAST;
           error: err.message,
         };
       }
+    },
+    getWallPaper: async (_, __, ctx) => {
+      try {
+        const payload = ctx.user;
+
+        const wallpaper = await prisma.$queryRaw`
+        
+        select url from wallpapers where user_id = ${payload.userId} 
+        
+        `;
+
+        console.log(wallpaper, "paper....");
+
+        const url = wallpaper[0].url;
+        return {
+          message: "Success fully retrieved data",
+          status: 200,
+          success: true,
+          data: {
+            _responseType: "Wallpaper",
+            url,
+          },
+        };
+      } catch (error) {}
     },
   },
   Mutation: {
@@ -1089,7 +1115,7 @@ SET
         const seen = await prisma.seen_message.createMany({
           data: message_ids.map((m) => ({
             message_id: parseInt(m),
-            user_id: 2,
+            user_id: payload.userId,
           })),
         });
 

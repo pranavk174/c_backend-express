@@ -12,7 +12,7 @@ type Chats {
   chat_id: Int!
   user_id: Int!
   profile_pic: String
-  cover_pic:String
+  cover_pic: String
   last_message: String
   last_message_at: String
   blocked: Boolean!
@@ -67,7 +67,11 @@ type AllChats {
   items: [Chats]
 }
 
-union ChatResponse = SingleChat | AllChats | Emojis
+type Wallpaper {
+  url: String!
+}
+
+union ChatResponse = SingleChat | AllChats | Emojis | Wallpaper
 
 type chatApiResponse implements apiResponse {
   message: String!
@@ -101,6 +105,7 @@ extend type Query {
   getChatById(input: ChatInput!): chatApiResponse! @auth @isChatMember
   getAllChats: chatApiResponse! @auth
   getEmojis: chatApiResponse!
+  getWallPaper: chatApiResponse! @auth
 }
 
 extend type Mutation {
@@ -111,5 +116,5 @@ extend type Mutation {
   reactMessage(input: ChatInput!): chatApiResponse! @auth @isChatMember
   forwardMessage(input: ChatInput!): chatApiResponse! @auth @isChatMember
   seenMessage(input: ChatInput!): chatApiResponse! @auth @isChatMember
-  setWallpaper(url:String!): chatApiResponse! @auth 
+  setWallpaper(url: String!): chatApiResponse! @auth
 }

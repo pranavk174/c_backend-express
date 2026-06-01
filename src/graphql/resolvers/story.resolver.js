@@ -302,7 +302,7 @@ LEFT JOIN (
         COALESCE(sl.user_id, sn.user_id) AS user_id,
 
         CASE 
-            WHEN sl.user_id IS NOT NULL THEN true
+            WHEN sl.user_id IS NOT NULL  THEN sl.liked
             ELSE false
         END AS liked,
 

@@ -1,5 +1,5 @@
 import prisma from "../../../prisma/prisma-client.js";
-import { STORY_SEEN } from "../../utils/events.js";
+import { STORY_LIKE, STORY_SEEN } from "../../utils/events.js";
 import {
   getSocketmembers,
   getSockets,
@@ -239,6 +239,16 @@ export const likeStory = async (socket, payload, data, callback) => {
     if (!liked) {
       throw new Error("Failed to like the story");
     }
+
+    const receiverSocketId = getSockets(storyData.user_id);
+    const res = getSocketmembers(storyData.user_id);
+    console.log(liked, "likeddd");
+
+    // seen.profile_pic = payload.profile_pic;
+    // seen.name = payload.name;
+    socket.to(receiverSocketId).emit(STORY_LIKE, liked, (response) => {
+      console.log("emitted datat in responseeee");
+    });
 
     return callback({
       message: `Story ${like === true ? "liked" : "unliked"} successfully`,

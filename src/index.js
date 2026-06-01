@@ -155,7 +155,7 @@ io.on("connection", (socket) => {
   socket.on(SEND_MESSAGE, (data, callback) => {
     // console.log(data, "new messageeeeee");
 
-    sendMessage(io, payload, data, callback);
+    sendMessage(socket, payload, data, callback);
   });
 
   socket.on(CHAT_JOINED, (data, callback) => {
@@ -174,8 +174,8 @@ io.on("connection", (socket) => {
   });
 
   socket.on(MESSAGE_SEEN, (data, callback) => {
-    console.log("message seenbd", data);
-    seenMessage(io, payload, data, callback);
+    console.log("message seenbd", data, payload);
+    seenMessage(socket, payload, data, callback);
   });
 
   socket.on(CHAT_LEAVED, (data, callback) => {
@@ -190,13 +190,13 @@ io.on("connection", (socket) => {
     const { chat_id } = data;
     console.log(data, "new reply messageeeeee");
 
-    replyMessage(io, payload, data, callback);
+    replyMessage(socket, payload, data, callback);
   });
 
   socket.on(MESSAGE_REACTION, (data, callback) => {
     console.log(data, "dataaaaaaa in reaction...");
 
-    reactMessage(io, payload, data, callback);
+    reactMessage(socket, payload, data, callback);
   });
 
   socket.on(STORY_REPLY, (data, callback) => {
@@ -204,16 +204,16 @@ io.on("connection", (socket) => {
   });
 
   socket.on(STORY_SEEN, (data, callback) => {
-    seenStory(io, payload, data, callback);
+    seenStory(socket, payload, data, callback);
   });
 
   socket.on(STORY_LIKE, (data, callback) => {
-    likeStory(io, payload, data, callback);
+    likeStory(socket, payload, data, callback);
   });
 
   socket.on("disconnect", () => {
     onlineUsers.delete(payload.userId.toString());
-    // console.log("User disconnected:", payload.userId, socket.id, onlineUsers);
+    console.log("User disconnected:", payload.userId, socket.id, onlineUsers);
     userSocketIDs.delete(String(payload.userId));
 
     // socket.emit(ONLINE_USERS, Array.from(onlineUsers));
