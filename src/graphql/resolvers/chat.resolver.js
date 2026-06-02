@@ -11,7 +11,7 @@ import { GraphQLError } from "graphql";
 const chatResolver = {
   ChatResponse: {
     __resolveType(obj) {
-      console.log(obj, "object dataaa");
+      // console.log(obj, "object dataaa");
       if (obj._responseType === "Emojis") {
         return "Emojis";
       } else if (obj._responseType === "SingleChat") {

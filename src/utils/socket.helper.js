@@ -2,6 +2,36 @@ export const userSocketIDs = new Map(); // userId -> socketId
 export const onlineUsers = new Set();
 import prisma from "../../prisma/prisma-client.js";
 import { ONLINE_USERS } from "./events.js";
+
+export const checkBlocked = async (user_id, otherUserId) => {
+  try {
+    const blocked = await prisma.block.findFirst({
+      where: {
+        blocked: true,
+
+        OR: [
+          {
+            user_id: user_id,
+            blocked_user_id: otherUserId,
+          },
+          {
+            user_id: otherUserId,
+            blocked_user_id: user_id,
+          },
+        ],
+      },
+    });
+
+    if (blocked) {
+      return true;
+    } else {
+      return false;
+    }
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
+
 export const joinChat = async (socket, data, callback) => {
   const { user_id, chat_id, chatMember } = data;
   console.log("chat joined user .....", data);
@@ -86,11 +116,38 @@ export const getSocketmembers = (id) => {
   return data;
 };
 
-export const sendUsers = (socket, payload) => {
-  // console.log("users online", payload);
+export const sendUsers = async (socket, payload) => {
+  // console.log("users online", onlineUsers, userSocketIDs);
 
-  socket.emit(ONLINE_USERS, Array.from(onlineUsers));
+  const users = Array.from(onlineUsers);
+
+  console.log(users, "users ");
+
+  // for (const friend of users) {
+  //   const isBlocked = await checkBlocked(payload.userId, parseInt(friend));
+  //   // console.log(isBlocked, "blocked condition....", friend);
+  //   if (isBlocked) continue;
+
+  //   const member = getSockets(friend);
+  //   console.log(
+  //     member,
+  //     "member ",
+  //     payload.name,
+  //     payload.userId,
+  //     Array.from(onlineUsers).filter((u) => u === friend.toString()),
+  //   );
+  //   const members = getSocketmembers(payload.userId);
+
+  //   //  io.to(`user:${friend.id}`).emit("userOnline", {
+  //   //     userId
+  //   //  });
+  //   socket.to(members.filter((m) => m != member)).emit(
+  //     ONLINE_USERS,
+  //     Array.from(onlineUsers).filter((u) => u === friend.toString()),
+  //   );
+  // }
+
   const members = getSocketmembers(payload.userId);
-  // socket.to(members).emit(ONLINE_USERS, Array.from(onlineUsers));
-  // console.log(members, "memberssss");
+  socket.to(members).emit(ONLINE_USERS, Array.from(onlineUsers));
+  console.log(members, "memberssss");
 };

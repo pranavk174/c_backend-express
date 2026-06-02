@@ -115,6 +115,7 @@ export const sendMessage = async (socket, payload, data, callback) => {
 
     // console.log(reciever_ids[0], "clg..... recievr id...");
 
+
     const receiverSocketId = userSocketIDs.get(String(reciever_ids[0]));
     addMessage[0] = { ...addMessage[0], seen_users: [] };
     if (receiverSocketId) {
@@ -124,7 +125,15 @@ export const sendMessage = async (socket, payload, data, callback) => {
       //   receiverSocketId,
       // );
 
+
+
+
+
+
       socket.to(`chat:${chat_ids[0]}`).emit(REFETCH_CHATS, addMessage);
+      
+      
+
     }
 
     // console.log(addMessage, "chatiddddd");
