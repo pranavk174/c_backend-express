@@ -27,7 +27,7 @@ model users {
   message                                      message[]
   message_delete_for_me                        message_delete_for_me[]
   message_reaction                             message_reaction[]
-  notification_notification_receiver_idTousers notification[]          @relation("notification_receiver_idTousers")
+  notification_notification_reciever_idTousers notification[]          @relation("notification_reciever_idTousers")
   notification_notification_sender_idTousers   notification[]          @relation("notification_sender_idTousers")
   notification_seen                            notification_seen[]
   privacy_settings                             privacy_settings[]
@@ -196,14 +196,14 @@ model message_reaction {
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model notification {
   notification_id                       Int                    @id @default(autoincrement())
-  receiver_id                           Int
+  reciever_id                           Int
   sender_id                             Int?
   notification_type                     notification_type_enum
   reference_id                          Int?
   metadata                              Json?
   is_seen                               Boolean?               @default(false)
   created_at                            DateTime?              @default(now()) @db.Timestamptz(6)
-  users_notification_receiver_idTousers users                  @relation("notification_receiver_idTousers", fields: [receiver_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users_notification_reciever_idTousers users                  @relation("notification_reciever_idTousers", fields: [reciever_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "notification_receiver_id_fkey")
   users_notification_sender_idTousers   users?                 @relation("notification_sender_idTousers", fields: [sender_id], references: [id], onUpdate: NoAction)
   notification_seen                     notification_seen[]
 }

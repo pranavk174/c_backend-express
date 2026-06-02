@@ -8,6 +8,9 @@ const userResolvers = {
   ResponseData: {
     __resolveType(obj) {
       // console.log(obj, "object dataaa");
+      if (obj.items) {
+        return "notifications";
+      }
       if (obj._responseType === "verifyOtpData") {
         return "verifyOtpData";
       }
@@ -50,6 +53,64 @@ const userResolvers = {
           status: 500,
           success: false,
           error: error.message,
+        };
+      }
+    },
+    getNotification: async (_, __, ctx) => {
+      try {
+        const payload = ctx.user;
+
+        const res = await prisma.$queryRaw`
+        
+        
+        select n.* ,u.profile_pic ,u.name from notification  n inner join users u on n.sender_id = u.id  
+        
+        
+        where is_seen = false and reciever_id = ${payload.userId} 
+        
+        
+        `;
+
+        // console.log(res, "resss from notificationssssss");
+
+        if (res.length === 0) {
+          return {
+            message: "No Notification Found",
+            status: 200,
+            success: true,
+          };
+        }
+        const notifications = res.reduce((acc, item) => {
+          const data = {
+            notification_id: item.notification_id,
+            notification_type: item.notification_type,
+            name: item.name,
+            message: item.metadata.message,
+            time: item.created_at,
+            profile_pic: item.profile_pic,
+          };
+
+          acc.push(data);
+
+          return acc;
+        }, []);
+        console.log(notifications, "notofvtaiossss");
+
+        return {
+          message: "Suucessfull",
+          status: 200,
+          success: true,
+          data: {
+            _responseType: "notifications",
+            items: notifications,
+          },
+        };
+      } catch (error) {
+        console.log(error);
+        return {
+          message: "errorrrr",
+          status: 500,
+          success: false,
         };
       }
     },

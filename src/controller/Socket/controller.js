@@ -1,4 +1,9 @@
-import { getSockets, userSocketIDs } from "../../utils/socket.helper.js";
+import {
+  getSockets,
+  isReceiverInRoom,
+  userSocketIDs,
+} from "../../utils/socket.helper.js";
+import { io } from "../../index.js";
 import prisma from "../../../prisma/prisma-client.js";
 import {
   checkMessageExists,
@@ -15,6 +20,7 @@ import {
   NEW_MESSAGE,
   ERROR,
   MESSAGE_SEEN,
+  NEW_NOTIFICATION,
 } from "../../utils/events.js";
 export const sendMessage = async (socket, payload, data, callback) => {
   console.log(data, "new messageeeeee");
@@ -113,27 +119,49 @@ export const sendMessage = async (socket, payload, data, callback) => {
       throw new Error();
     }
 
-    // console.log(reciever_ids[0], "clg..... recievr id...");
-
-
-    const receiverSocketId = userSocketIDs.get(String(reciever_ids[0]));
     addMessage[0] = { ...addMessage[0], seen_users: [] };
-    if (receiverSocketId) {
-      // console.log(
-      //   "yes condition....................",
-      //   userSocketIDs,
-      //   receiverSocketId,
-      // );
 
+    const receiverInRoom = isReceiverInRoom(io, reciever_ids[0], chat_ids[0]);
+    console.log("Receiver room mein hai:", receiverInRoom);
 
-
-
-
-
+    if (receiverInRoom) {
+      // Receiver room mein hai — room pe emit karo
       socket.to(`chat:${chat_ids[0]}`).emit(REFETCH_CHATS, addMessage);
-      
-      
+    } else {
+      // Receiver room mein nahi hai — direct socket ID pe emit karo (agar online ho)
+      const receiverSocketId = userSocketIDs.get(String(reciever_ids[0]));
+      // if (receiverSocketId) {
+      //   io.to(receiverSocketId).emit(REFETCH_CHATS, addMessage);
 
+      // }
+
+      const res = await prisma.$queryRaw`
+      
+      insert into notification (reciever_id,sender_id ,notification_type,metadata) values(
+        ${reciever_ids[0]},${payload.userId},'new_message',   ${JSON.stringify({
+          message: `You have a new Message From ${payload.name}`,
+        })}::jsonb
+
+      
+      
+      ) returning *
+      
+      
+      `;
+
+      const notification = {
+        notification_id: res[0].notification_id,
+        notification_type: res[0].notification_type,
+        name: payload.name,
+        message: res[0].metadata.message,
+        time: res[0].created_at,
+        avatar: payload.profile_pic,
+        color: "#25D366",
+      };
+
+      console.log(notification, "notification dataaa");
+
+      socket.to(receiverSocketId).emit(NEW_NOTIFICATION, notification);
     }
 
     // console.log(addMessage, "chatiddddd");

@@ -36,12 +36,26 @@ input UpdateUserInput {
   profile_pic: String
 }
 
+type notification {
+  notification_id: Int!
+  notification_type: String!
+  name: String!
+  message: String!
+  time: String!
+  profile_pic: String
+  # color: "#ff4d6d",
+}
+
+type notifications {
+  items: [notification]!
+}
+
 type verifyOtpData {
   email: String!
   id: Int!
   is_verified: Boolean
 }
-union ResponseData = User | verifyOtpData
+union ResponseData = User | verifyOtpData | notifications
 type userApiResponse implements apiResponse {
   message: String!
   status: Int!
@@ -73,6 +87,7 @@ input blockUserInput {
 
 extend type Query {
   getUser: userApiResponse! @auth
+  getNotification: userApiResponse! @auth
 }
 
 extend type Mutation {

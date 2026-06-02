@@ -111,6 +111,23 @@ export const getSockets = (member) => {
   return receiverSocketId;
 };
 
+/**
+ * Check karta hai ki receiver currently given chat room mein join kiya hua hai ya nahi.
+ * @param {import("socket.io").Server} io - Socket.IO server instance
+ * @param {string|number} receiverId - Receiver ka userId
+ * @param {string|number} chatId - Chat room ka ID
+ * @returns {boolean}
+ */
+export const isReceiverInRoom = (io, receiverId, chatId) => {
+  const receiverSocketId = userSocketIDs.get(String(receiverId));
+  if (!receiverSocketId) return false; // receiver online hi nahi hai
+
+  const room = io.sockets.adapter.rooms.get(`chat:${chatId}`);
+  if (!room) return false; // room exist hi nahi karti
+
+  return room.has(receiverSocketId);
+};
+
 export const getSocketmembers = (id) => {
   const data = Array.from(userSocketIDs).map((d) => d[1]);
   return data;
