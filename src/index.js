@@ -103,6 +103,7 @@ app.use("/graphql", yoga);
 
 io.use(async (socket, next) => {
   try {
+    
     const cookies = cookie.parse(socket.handshake.headers.cookie || "");
 
     const token = cookies.accessToken;
@@ -129,6 +130,11 @@ io.use(async (socket, next) => {
 
     next();
   } catch (error) {
+    return {
+      message: error.message,
+      status: 401,
+      success: false,
+    };
     next(new Error("Unauthorized"));
   }
 });
@@ -162,7 +168,7 @@ io.on("connection", (socket) => {
     // console.log("chat joined in event user .....", data);
 
     const { chat_id } = data;
-    joinChat(socket, data, callback);
+    joinChat(socket, payload, data, callback);
 
     // const room = io.sockets.adapter.rooms;
 

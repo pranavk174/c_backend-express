@@ -63,11 +63,21 @@ const userResolvers = {
         const res = await prisma.$queryRaw`
         
         
-        select n.* ,u.profile_pic ,u.name from notification  n inner join users u on n.sender_id = u.id  
-        
-        
-        where is_seen = false and reciever_id = ${payload.userId} 
-        
+     SELECT 
+    n.*,
+    u.profile_pic,
+    u.name
+FROM notification n
+
+INNER JOIN users u
+ON n.sender_id = u.id
+
+LEFT JOIN notification_seen ns
+ON ns.notification_id = n.notification_id
+AND ns.user_id = ${payload.userId}
+
+WHERE n.reciever_id = ${payload.userId}
+AND ns.notification_id IS NULL;
         
         `;
 
@@ -78,6 +88,9 @@ const userResolvers = {
             message: "No Notification Found",
             status: 200,
             success: true,
+            data: {
+              items: [],
+            },
           };
         }
         const notifications = res.reduce((acc, item) => {
@@ -290,7 +303,7 @@ const userResolvers = {
           const accessToken = jwt.sign(
             { userId: user.id, device_id: device_id, email: email },
             process.env.JWT_SECRET,
-            { expiresIn: "15m" },
+            { expiresIn: "1m" },
           );
 
           const refreshToken = jwt.sign(
@@ -758,6 +771,8 @@ const userResolvers = {
         };
       } catch (error) {
         console.log(error, "error in  generated token...");
+        await context.request.cookieStore?.delete("accessToken");
+        await context.request.cookieStore?.delete("refreshToken");
         return {
           message: "Failed to refresh token",
           success: false,

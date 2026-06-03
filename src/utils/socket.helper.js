@@ -1,6 +1,7 @@
 export const userSocketIDs = new Map(); // userId -> socketId
 export const onlineUsers = new Set();
 import prisma from "../../prisma/prisma-client.js";
+import { Prisma } from "@prisma/client";
 import { ONLINE_USERS } from "./events.js";
 
 export const checkBlocked = async (user_id, otherUserId) => {
@@ -32,7 +33,7 @@ export const checkBlocked = async (user_id, otherUserId) => {
   }
 };
 
-export const joinChat = async (socket, data, callback) => {
+export const joinChat = async (socket, payload, data, callback) => {
   const { user_id, chat_id, chatMember } = data;
   console.log("chat joined user .....", data);
   onlineUsers.add(user_id.toString());
@@ -78,7 +79,35 @@ export const joinChat = async (socket, data, callback) => {
     });
   }
 
-  // console.log(blocked, "user joinedddd.");
+  const notifications = await prisma.$queryRaw`
+  
+
+SELECT n.*
+FROM notification n
+LEFT JOIN notification_seen ns
+ON n.notification_id = ns.notification_id
+AND ns.user_id = ${payload.userId}
+
+WHERE n.reciever_id = ${payload.userId} and n.sender_id = ${otherUserId}
+AND ns.notification_id IS NULL;
+  
+  `;
+
+  console.log(notifications, "notificatiossssns..");
+
+  if (notifications.length > 0) {
+    const values = notifications.map(
+      (no) => Prisma.sql`(${no.notification_id}, ${payload.userId})`,
+    );
+
+    const insertSeen = await prisma.$queryRaw`
+  INSERT INTO notification_seen (notification_id, user_id)
+  VALUES ${Prisma.join(values)}
+  ON CONFLICT(notification_id, user_id)
+  DO NOTHING
+`;
+    console.log(insertSeen, "user seened notification.");
+  }
 
   const users = socket.join(`chat:${chat_id}`);
 
