@@ -1,6 +1,12 @@
 import prisma from "../../../prisma/prisma-client.js";
-import { STORY_LIKE, STORY_SEEN } from "../../utils/events.js";
 import {
+  NEW_NOTIFICATION,
+  SEEN_NOTIFICATION,
+  STORY_LIKE,
+  STORY_SEEN,
+} from "../../utils/events.js";
+import {
+  createNotification,
   getSocketmembers,
   getSockets,
   onlineUsers,
@@ -32,6 +38,7 @@ HAVING COUNT(DISTINCT member_id) = 2;
 
     console.log(chatid, "chatdataaaaaaa", storyData);
 
+    let reply = null;
     if (!chatid || chatid.length === 0) {
       const chatData = await chat.create({
         data: {
@@ -55,35 +62,34 @@ HAVING COUNT(DISTINCT member_id) = 2;
         ],
       });
 
-      const reply = await prisma.$queryRaw`
+      reply = await prisma.$queryRaw`
 insert into message (
 chat_id ,sender_id ,content ,story_id, created_at) values(${chatData.id} , ${parseInt(payload.userId)} , ${content}, ${parseInt(storyData.id)}, NOW()
 )
 
           `;
-
-      if (!reply) {
-        throw new Error("Failed to send reply");
-      }
-      return {
-        message: "Reply added successfully",
-        status: 201,
-        success: true,
-        // data: reply,
-      };
-    }
-
-    // const reply = await prisma.chat_member.
-
-    const reply = await prisma.$queryRaw`
+    } else {
+      reply = await prisma.$queryRaw`
 insert into message (
 chat_id ,sender_id ,content ,story_id, created_at) values(${chatid[0].chat_id} , ${parseInt(payload.userId)} , ${content}, ${parseInt(storyData.id)}, NOW()
 )
   `;
-
+    }
     if (!reply) {
       throw new Error("Failed to send reply");
     }
+
+    const { notification } = await createNotification(
+      storyData.user_id,
+      payload,
+      "new_message",
+      `${payload.name} have Replied to your Story`,
+    );
+
+    const receiverSocketId = userSocketIDs.get(String(storyData.user_id));
+    socket.to(receiverSocketId).emit(NEW_NOTIFICATION, notification);
+
+    // const reply = await prisma.chat_member.
 
     return callback({
       message: "Reply added successfully",
@@ -92,7 +98,7 @@ chat_id ,sender_id ,content ,story_id, created_at) values(${chatid[0].chat_id} ,
       data: reply,
     });
   } catch (error) {
-    console.log(story, "errorrr in story reply.");
+    console.log(error, "errorrr in story reply.");
     return callback({
       message: "Something went wrong",
       status: 500,
@@ -246,9 +252,21 @@ export const likeStory = async (socket, payload, data, callback) => {
 
     // seen.profile_pic = payload.profile_pic;
     // seen.name = payload.name;
+
     socket.to(receiverSocketId).emit(STORY_LIKE, liked, (response) => {
       console.log("emitted datat in responseeee");
     });
+
+    if (like === true) {
+      const { notification } = await createNotification(
+        storyData.user_id,
+        payload,
+        "story_like",
+        `${payload.name} liked your story`,
+        storyData.id,
+      );
+      socket.to(receiverSocketId).emit(NEW_NOTIFICATION, notification);
+    }
 
     return callback({
       message: `Story ${like === true ? "liked" : "unliked"} successfully`,

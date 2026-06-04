@@ -101,6 +101,7 @@ AND ns.notification_id IS NULL;
             message: item.metadata.message,
             time: item.created_at,
             profile_pic: item.profile_pic,
+            reference_id: item.reference_id,
           };
 
           acc.push(data);

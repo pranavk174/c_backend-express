@@ -275,6 +275,8 @@ SELECT DISTINCT ON (c.id)
 
     m.id AS last_message_id,
 
+
+
     CASE 
         WHEN m.content IS NULL 
         THEN a.file_type::text
@@ -320,6 +322,9 @@ LEFT JOIN LATERAL (
 
 ) active_block ON true
 
+
+
+
 LEFT JOIN LATERAL (
 
     SELECT *
@@ -338,6 +343,7 @@ LEFT JOIN LATERAL (
 
             WHERE
             (
+    
                 (
                     b.user_id = ${payload.userId}
                     AND b.blocked_user_id = message.sender_id

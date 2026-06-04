@@ -2,7 +2,7 @@ export const userSocketIDs = new Map(); // userId -> socketId
 export const onlineUsers = new Set();
 import prisma from "../../prisma/prisma-client.js";
 import { Prisma } from "@prisma/client";
-import { ONLINE_USERS } from "./events.js";
+import { ONLINE_USERS, SEEN_NOTIFICATION } from "./events.js";
 
 export const checkBlocked = async (user_id, otherUserId) => {
   try {
@@ -88,7 +88,7 @@ LEFT JOIN notification_seen ns
 ON n.notification_id = ns.notification_id
 AND ns.user_id = ${payload.userId}
 
-WHERE n.reciever_id = ${payload.userId} and n.sender_id = ${otherUserId}
+WHERE n.reciever_id = ${payload.userId} and n.sender_id = ${otherUserId} and n.notification_type = 'new_message'
 AND ns.notification_id IS NULL;
   
   `;
@@ -104,9 +104,21 @@ AND ns.notification_id IS NULL;
   INSERT INTO notification_seen (notification_id, user_id)
   VALUES ${Prisma.join(values)}
   ON CONFLICT(notification_id, user_id)
-  DO NOTHING
+  DO NOTHING  returning notification_id
 `;
-    console.log(insertSeen, "user seened notification.");
+
+    // const seen = insertSeen.reduce((acc, idx) => {
+    //   const data = idx.notification_id;
+
+    //   console.log(data, "data in redice");
+    //   // acc.push(data);
+    // }, []);
+
+    console.log(insertSeen, "insert seen npotficationssssss...");
+    socket.emit(
+      SEEN_NOTIFICATION,
+      insertSeen.map((seen) => seen.notification_id),
+    );
   }
 
   const users = socket.join(`chat:${chat_id}`);
@@ -196,4 +208,47 @@ export const sendUsers = async (socket, payload) => {
   const members = getSocketmembers(payload.userId);
   socket.to(members).emit(ONLINE_USERS, Array.from(onlineUsers));
   console.log(members, "memberssss");
+};
+
+export const createNotification = async (
+  reciever_id,
+  payload,
+  type,
+  message,
+  reference_id = null,
+) => {
+  try {
+    const res = await prisma.$queryRaw`
+      
+   
+
+
+
+      insert into notification (reciever_id,sender_id ,notification_type,metadata,reference_id) values(
+        ${reciever_id},${payload.userId},${type},   ${JSON.stringify({
+          message: `${message}`,
+        })}::jsonb , ${reference_id}
+
+      
+      
+      ) returning *
+      
+      
+      `;
+
+    const notification = {
+      notification_id: res[0].notification_id,
+      notification_type: res[0].notification_type,
+      name: payload.name,
+      message: res[0].metadata.message,
+      time: res[0].created_at,
+      reference_id: res[0].reference_id,
+      profile_pic: payload.profile_pic,
+      color: "#25D366",
+    };
+
+    return { notification, res };
+  } catch (err) {
+    throw new Error(err.message);
+  }
 };

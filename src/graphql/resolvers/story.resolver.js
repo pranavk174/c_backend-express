@@ -400,8 +400,14 @@ WHERE
             b.user_id = ${payload.userId}
             AND b.blocked_user_id = s.user_id
         )
-
+        AND s.created_at >= b.blocked_at
+        AND (
+          b.unblocked_at IS NULL
+          OR
+          s.created_at <= b.unblocked_at
+      )
     )
+
 
 
 GROUP BY

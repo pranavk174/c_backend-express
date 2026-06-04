@@ -22,6 +22,7 @@ import {
   STORY_REPLY,
   STORY_SEEN,
   STORY_LIKE,
+  SEEN_NOTIFICATION,
 } from "./utils/events.js";
 import cookie from "cookie";
 import { validateCookie } from "./lib/tokenvalidator.js";
@@ -45,6 +46,7 @@ import {
   replyStory,
   seenStory,
 } from "./controller/Socket/story.controller.js";
+import { seenNotification } from "./controller/Socket/notification.controller.js";
 // import { authMiddleware } from "./middlewares/auth.js";
 const app = express();
 const server = http.createServer(app);
@@ -103,7 +105,6 @@ app.use("/graphql", yoga);
 
 io.use(async (socket, next) => {
   try {
-    
     const cookies = cookie.parse(socket.handshake.headers.cookie || "");
 
     const token = cookies.accessToken;
@@ -169,14 +170,6 @@ io.on("connection", (socket) => {
 
     const { chat_id } = data;
     joinChat(socket, payload, data, callback);
-
-    // const room = io.sockets.adapter.rooms;
-
-    // // total members
-    // const membersCount = room ? room.size : 0;
-
-    // console.log("Members:", membersCount, room);
-    // seenMessage(socket, payload, data);
   });
 
   socket.on(MESSAGE_SEEN, (data, callback) => {
@@ -215,6 +208,10 @@ io.on("connection", (socket) => {
 
   socket.on(STORY_LIKE, (data, callback) => {
     likeStory(socket, payload, data, callback);
+  });
+
+  socket.on(SEEN_NOTIFICATION, (data, callback) => {
+    seenNotification(socket, payload, data, callback);
   });
 
   socket.on("disconnect", () => {

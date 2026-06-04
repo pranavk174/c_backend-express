@@ -43,6 +43,7 @@ type notification {
   message: String!
   time: String!
   profile_pic: String
+  reference_id: Int
   # color: "#ff4d6d",
 }
 

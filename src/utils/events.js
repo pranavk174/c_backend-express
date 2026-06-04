@@ -57,3 +57,4 @@ export const CALL_ENDED = "CALL_ENDED";
 // Notifications
 export const NEW_MESSAGE_ALERT = "NEW_MESSAGE_ALERT";
 export const NEW_NOTIFICATION = "NEW_NOTIFICATION";
+export const SEEN_NOTIFICATION = "SEEN_NOTIFICATION";
