@@ -21,6 +21,7 @@ export const STORY_SEEN = "STORY_SEEN";
 export const STORY_LIKE = "STORY_LIKE";
 
 export const MESSAGE_SEEN = "MESSAGE_SEEN";
+export const UNSEEN_MESSAGE = "UNSEEN_MESSAGE";
 export const MESSAGE_DELIVERED = "MESSAGE_DELIVERED";
 
 export const NEW_ATTACHMENT = "NEW_ATTACHMENT";

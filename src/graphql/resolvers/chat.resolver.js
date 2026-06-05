@@ -16,6 +16,8 @@ const chatResolver = {
         return "Emojis";
       } else if (obj._responseType === "SingleChat") {
         return "SingleChat";
+      } else if (obj._responseType === "newChat") {
+        return "newChat";
       } else if (obj._responseType === "AllChats") {
         return "AllChats";
       } else if (obj._responseType === "Wallpaper") {
@@ -276,6 +278,7 @@ SELECT DISTINCT ON (c.id)
     m.id AS last_message_id,
 
 
+unread.unread_count ,
 
     CASE 
         WHEN m.content IS NULL 
@@ -324,6 +327,24 @@ LEFT JOIN LATERAL (
 
 
 
+LEFT JOIN LATERAL (
+
+    SELECT COUNT(*)::int AS unread_count
+
+    FROM message msg
+
+    WHERE msg.chat_id = c.id
+      AND msg.sender_id <> ${payload.userId}
+      AND msg.is_deleted = false
+
+      AND NOT EXISTS (
+          SELECT 1
+          FROM seen_message sm
+          WHERE sm.message_id = msg.id 
+            AND sm.user_id = ${payload.userId}
+      )
+
+) unread ON true
 
 LEFT JOIN LATERAL (
 
@@ -379,6 +400,10 @@ LEFT JOIN LATERAL (
 
 ) m ON true
 
+
+
+
+
 LEFT JOIN attachment a
 ON a.message_id = m.id
 AND m.content IS NULL
@@ -395,7 +420,7 @@ ORDER BY c.id, m.created_at DESC NULLS LAST;
 
 `;
 
-        // console.log(chats, "chatsssssss");
+        console.log(chats, "chatsssssss");
 
         if (!chats) {
           throw new Error();
@@ -473,6 +498,55 @@ ORDER BY c.id, m.created_at DESC NULLS LAST;
     },
   },
   Mutation: {
+    createNewChat: async (_, { member_id }, ctx) => {
+      if (!member_id) {
+        throw new Error("Member id is Missing");
+      }
+      try {
+        const payload = ctx.user;
+
+        const exists = await checkChatExists(prisma, payload.userId, [
+          member_id,
+        ]);
+
+        if (!exists) {
+          const newChat = await prisma.$queryRaw`
+          
+          insert into chat (chat_type) values('private_chat') returning id
+          
+          
+          `;
+          if (!newChat) {
+            throw new Error();
+          }
+
+          const values = Prisma.sql`(${newChat[0].id}, ${payload.userId}),(${newChat[0].id}, ${member_id})`;
+
+          await prisma.$queryRaw`
+          
+          
+          insert into chat_member (chat_id , member_id)
+          values ${Prisma.join(values)}
+          `;
+
+          return {
+            message: "Chat Created Successfully",
+            status: 201,
+            success: true,
+            data: {
+              _responseType: "newChat",
+              chat_id: chatData[0].id,
+            },
+          };
+        }
+      } catch (error) {
+        return {
+          message: error.message,
+          status: 500,
+          success: false,
+        };
+      }
+    },
     sendMessage: async (
       _,
       { input: { chat_ids, reciever_ids, content = null, media = [] } },

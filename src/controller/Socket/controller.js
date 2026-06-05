@@ -21,6 +21,7 @@ import {
   ERROR,
   MESSAGE_SEEN,
   NEW_NOTIFICATION,
+  NEW_MESSAGE_ALERT,
 } from "../../utils/events.js";
 export const sendMessage = async (socket, payload, data, callback) => {
   console.log(data, "new messageeeeee");
@@ -162,6 +163,22 @@ export const sendMessage = async (socket, payload, data, callback) => {
       console.log(notification, "notification dataaa");
 
       socket.to(receiverSocketId).emit(NEW_NOTIFICATION, notification);
+      socket.to(receiverSocketId).emit(NEW_MESSAGE_ALERT, {
+        chat_id: addMessage[0].chat_id,
+        chat_type: "private",
+        user_id: payload.userId,
+        name: payload.name,
+        blocked: false,
+        cover_pic: payload.cover_pic,
+        profile_pic: payload.profile_pic,
+        bio: payload.bio,
+        email: payload.email,
+        mobile: payload.mobile,
+        last_message_id: addMessage[0].id,
+        unread_count: addMessage.length,
+        last_message: addMessage[0].content,
+        last_message_at: addMessage[0].created_at,
+      });
     }
 
     // console.log(addMessage, "chatiddddd");

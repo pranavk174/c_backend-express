@@ -17,6 +17,10 @@ const transporter = nodemailer.createTransport({
 
 export const sendMail = async (email, otp) => {
   try {
+    console.log(
+      { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+      "credentialsss",
+    );
     const info = await transporter.sendMail({
       from: process.env.SMTP_USER, // sender address
       to: email, // list of recipients
@@ -31,6 +35,8 @@ export const sendMail = async (email, otp) => {
 
     return false;
   } catch (err) {
+    console.log(err, "error in send mail......");
+
     switch (err.code) {
       case "ECONNECTION":
       case "ETIMEDOUT":

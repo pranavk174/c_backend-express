@@ -18,6 +18,10 @@ type User implements Email {
   cover_pic: String
 }
 
+type Users {
+  items: [User]!
+}
+
 input UserInput {
   fname: String!
   lname: String!
@@ -56,7 +60,7 @@ type verifyOtpData {
   id: Int!
   is_verified: Boolean
 }
-union ResponseData = User | verifyOtpData | notifications
+union ResponseData = Users | User | verifyOtpData | notifications
 type userApiResponse implements apiResponse {
   message: String!
   status: Int!
@@ -88,13 +92,14 @@ input blockUserInput {
 
 extend type Query {
   getUser: userApiResponse! @auth
+  getUsers: userApiResponse! @auth
   getNotification: userApiResponse! @auth
 }
 
 extend type Mutation {
   sendOtpMail(email: String!): userApiResponse!
   verifyOtp(input: verifyOtpInput): userApiResponse!
-  createUser(input: UserInput): userApiResponse! @auth
+  createUser(input: UserInput): userApiResponse!
   updateUser(input: UpdateUserInput): userApiResponse! @auth
   generateRefreshToken: userApiResponse!
   logout: userApiResponse! @auth

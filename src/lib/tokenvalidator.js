@@ -37,3 +37,31 @@ export const validateCookie = async (token) => {
 
   return payload;
 };
+
+export const generateTokens = (user, email, device_id) => {
+  const accessToken = jwt.sign(
+    {
+      userId: user.id,
+      device_id,
+      email,
+    },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: "15m",
+    },
+  );
+
+  const refreshToken = jwt.sign(
+    {
+      userId: user.id,
+      device_id,
+      email,
+    },
+    process.env.REFRESH_SECRET,
+    {
+      expiresIn: "7d",
+    },
+  );
+
+  return { accessToken, refreshToken };
+};

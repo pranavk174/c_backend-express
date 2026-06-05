@@ -7,8 +7,8 @@ import jwt from "jsonwebtoken";
 const userResolvers = {
   ResponseData: {
     __resolveType(obj) {
-      // console.log(obj, "object dataaa");
-      if (obj.items) {
+      console.log(obj, "object dataaa");
+      if (obj._responseType === "notifications") {
         return "notifications";
       }
       if (obj._responseType === "verifyOtpData") {
@@ -17,6 +17,10 @@ const userResolvers = {
 
       if (obj._responseType === "User") {
         return "User";
+      }
+      if (obj._responseType === "Users") {
+        console.log(":ye shi huaaaa");
+        return "Users";
       }
 
       return null;
@@ -56,6 +60,49 @@ const userResolvers = {
         };
       }
     },
+    getUsers: async (_, __, ctx) => {
+      try {
+        const payload = ctx.user;
+
+        const users = await prisma.$queryRaw`
+        
+        SELECT u.*
+        FROM users u
+        WHERE u.id <> ${payload.userId}
+        AND NOT EXISTS (
+            SELECT ${payload.userId}
+            FROM chat_member my_cm
+            JOIN chat_member other_cm
+                ON my_cm.chat_id = other_cm.chat_id
+            WHERE my_cm.member_id = ${payload.userId}
+              AND other_cm.member_id = u.id
+        )
+        
+        `;
+
+        if (!users) {
+          throw new Error();
+        }
+        return {
+          message: "Sucesfully retrieved Users",
+          status: 200,
+          success: true,
+          data: {
+            _responseType: "Users",
+            items: users,
+          },
+        };
+
+        // console.log(users, "users dataaaaaa.");
+      } catch (error) {
+        return {
+          message: "Something went Wrong",
+          status: 500,
+          success: false,
+          error: error.message,
+        };
+      }
+    },
     getNotification: async (_, __, ctx) => {
       try {
         const payload = ctx.user;
@@ -89,6 +136,7 @@ AND ns.notification_id IS NULL;
             status: 200,
             success: true,
             data: {
+            _responseType: 'notifications',
               items: [],
             },
           };
@@ -160,8 +208,8 @@ AND ns.notification_id IS NULL;
             };
           }
 
-          const sent = await sendMail(email, otp);
-          if (!sent) throw new Error();
+          // const sent = await sendMail(email, otp);
+          // if (!sent) throw new Error();
 
           await prisma.otp.upsert({
             where: { email },
@@ -183,8 +231,8 @@ AND ns.notification_id IS NULL;
           };
         }
 
-        const sent = await sendMail(email, otp);
-        if (!sent) throw new Error();
+        // const sent = await sendMail(email, otp);
+        // if (!sent) throw new Error();
 
         // ✅ NEW USER → use register table
         const hashedOtp = await bcrypt.hash(String(otp), 10);
