@@ -23,7 +23,6 @@ const chatResolver = {
       } else if (obj._responseType === "Wallpaper") {
         return "Wallpaper";
       }
-
       return obj._responseType;
     },
   },
@@ -484,6 +483,13 @@ ORDER BY c.id, m.created_at DESC NULLS LAST;
 
         console.log(wallpaper, "paper....");
 
+        if (wallpaper.length === 0) {
+          return {
+            message: "No Wallpaper Found",
+            status: 200,
+            success: false,
+          };
+        }
         const url = wallpaper[0].url;
         return {
           message: "Success fully retrieved data",
@@ -505,14 +511,15 @@ ORDER BY c.id, m.created_at DESC NULLS LAST;
       try {
         const payload = ctx.user;
 
+        let chat_id = null;
         const exists = await checkChatExists(prisma, payload.userId, [
           member_id,
         ]);
 
-        if (!exists) {
+        if (exists.length === 0) {
           const newChat = await prisma.$queryRaw`
           
-          insert into chat (chat_type) values('private_chat') returning id
+          insert into chat (chat_type) values('private') returning id
           
           
           `;
@@ -520,25 +527,30 @@ ORDER BY c.id, m.created_at DESC NULLS LAST;
             throw new Error();
           }
 
-          const values = Prisma.sql`(${newChat[0].id}, ${payload.userId}),(${newChat[0].id}, ${member_id})`;
+          chat_id = newChat[0].id;
 
-          await prisma.$queryRaw`
+          // const values = Prisma.sql`(${newChat[0].id}, ${payload.userId}),(${newChat[0].id}, ${member_id})`;
+
+          const members = await prisma.$queryRaw`
           
           
           insert into chat_member (chat_id , member_id)
-          values ${Prisma.join(values)}
+          values  (${newChat[0].id}, ${payload.userId}),
+          (${newChat[0].id}, ${member_id})
           `;
-
-          return {
-            message: "Chat Created Successfully",
-            status: 201,
-            success: true,
-            data: {
-              _responseType: "newChat",
-              chat_id: chatData[0].id,
-            },
-          };
+        } else {
+          chat_id = exists[0].chat_id;
         }
+
+        return {
+          message: "Chat Created Successfully",
+          status: 201,
+          success: true,
+          data: {
+            _responseType: "newChat",
+            chat_id,
+          },
+        };
       } catch (error) {
         return {
           message: error.message,

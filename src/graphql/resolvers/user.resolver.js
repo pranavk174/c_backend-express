@@ -7,7 +7,7 @@ import jwt from "jsonwebtoken";
 const userResolvers = {
   ResponseData: {
     __resolveType(obj) {
-      console.log(obj, "object dataaa");
+      // console.log(obj, "object dataaa");
       if (obj._responseType === "notifications") {
         return "notifications";
       }
@@ -156,7 +156,7 @@ AND ns.notification_id IS NULL;
 
           return acc;
         }, []);
-        console.log(notifications, "notofvtaiossss");
+        // console.log(notifications, "notofvtaiossss");
 
         return {
           message: "Suucessfull",
