@@ -1,0 +1,27 @@
+type notification {
+  notification_id: Int!
+  notification_type: String!
+  name: String!
+  message: String!
+  time: String!
+  profile_pic: String
+  reference_id: Int
+}
+
+type notifications {
+  items: [notification]!
+}
+
+union NotificationResponse = notifications
+
+type notificationApiResponse implements apiResponse {
+  message: String!
+  status: Int!
+  success: Boolean!
+  error: String
+  data: notifications
+}
+
+extend type Query {
+  getNotification: notificationApiResponse! @auth
+}

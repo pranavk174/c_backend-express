@@ -34,13 +34,23 @@ const storySchema = readFileSync(
   "utf-8",
 );
 
-const chatResolver = readFileSync(
+const chatSchema = readFileSync(
   new URL("./schema/chats.schema.gql", import.meta.url),
   "utf-8",
 );
 
+const notificationSchema = readFileSync(
+  new URL("./schema/notification.schema.gql", import.meta.url),
+  "utf-8",
+);
+
 const typeDefs =
-  baseSchema + userSchema + storySchema + PrivacySchema + chatResolver;
+  baseSchema +
+  userSchema +
+  storySchema +
+  PrivacySchema +
+  chatSchema  +
+  notificationSchema;
 
 let schema = createSchema({
   typeDefs,
@@ -50,7 +60,7 @@ let schema = createSchema({
 schema = isChatMemberDirective(schema);
 schema = authDirectiveTransformer(schema);
 
-const signingKey = process.env.JWT_SECRET;
+
 export const yoga = createYoga({
   schema,
   graphqlEndpoint: "/graphql",
@@ -60,13 +70,10 @@ export const yoga = createYoga({
       signingKeyProviders: [
         createInlineSigningKeyProvider(process.env.JWT_SECRET),
       ],
-
       tokenLookupLocations: [
         extractFromCookie({ name: "accessToken" }), // 👈 cookie se token uthao
       ],
-
       extendContext: true,
-
       reject: {
         missingToken: false, // 👈 taaki public routes chale
         invalidToken: false,
