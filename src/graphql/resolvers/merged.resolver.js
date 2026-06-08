@@ -2,6 +2,7 @@ import userResolver from "../resolvers/user.resolver.js";
 import Storyresolver from "../resolvers/story.resolver.js";
 import { privacyResolvers } from "./privacy.resolver.js";
 import { notificationResolver } from "./notification.resolver.js";
+import { pubsub } from "../../lib/helpers.js";
 import chatResolver from "./chat.resolver.js";
 import { GraphQLBigInt } from "graphql-scalars";
 const mergedResolvers = {
@@ -20,6 +21,15 @@ const mergedResolvers = {
     ...privacyResolvers.Mutation,
     ...chatResolver.Mutation,
     ...notificationResolver.Mutation,
+  },
+  Subscription: {
+    newMessage: {
+      subscribe: (_, { chat_id }) => {
+        return pubsub.subscribe(`CHAT_${chat_id}`);
+      },
+
+      resolve: (payload) => payload,
+    },
   },
   // ResponseData: {
   //   __resolveType(obj) {

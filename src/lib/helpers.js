@@ -1,4 +1,6 @@
 import { userSocketIDs } from "../utils/socket.helper.js";
+import { createPubSub } from "graphql-yoga";
+
 export const checkMessageExists = async (prisma, message_ids) => {
   const data = await prisma.$queryRaw`
 
@@ -76,3 +78,5 @@ export const getSockets = (member) => {
   const receiverSocketId = userSocketIDs.get(String(member));
   return receiverSocketId;
 };
+
+export const pubsub = createPubSub();

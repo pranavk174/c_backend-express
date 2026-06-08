@@ -23,6 +23,7 @@ import {
   STORY_SEEN,
   STORY_LIKE,
   SEEN_NOTIFICATION,
+  EDIT_MESSAGE,
 } from "./utils/events.js";
 import cookie from "cookie";
 import { validateCookie } from "./lib/tokenvalidator.js";
@@ -36,6 +37,7 @@ import {
   userSocketIDs,
 } from "./utils/socket.helper.js";
 import {
+  editMessage,
   reactMessage,
   replyMessage,
   seenMessage,
@@ -54,6 +56,7 @@ const server = http.createServer(app);
 const allowedOrigins = [
   "http://localhost:3001",
   "https://cfrontend-one.vercel.app",
+  "*",
   process.env.FRONTEND_URL,
 ];
 
@@ -91,7 +94,8 @@ app.use(
       if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        callback(new Error("CORS not allowed"));
+        // callback(new Error("CORS not allowed"));
+        callback(null, true);
       }
     },
 
@@ -196,6 +200,10 @@ io.on("connection", (socket) => {
     console.log(data, "dataaaaaaa in reaction...");
 
     reactMessage(socket, payload, data, callback);
+  });
+
+  socket.on(EDIT_MESSAGE, (data, callback) => {
+    editMessage(socket, payload, data, callback);
   });
 
   socket.on(STORY_REPLY, (data, callback) => {

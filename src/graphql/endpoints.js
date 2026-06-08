@@ -1,4 +1,6 @@
 import { createYoga, createSchema } from "graphql-yoga";
+import { createPubSub } from "graphql-yoga";
+
 import { readFileSync } from "fs";
 import {
   authDirectiveTransformer,
@@ -49,7 +51,7 @@ const typeDefs =
   userSchema +
   storySchema +
   PrivacySchema +
-  chatSchema  +
+  chatSchema +
   notificationSchema;
 
 let schema = createSchema({
@@ -59,7 +61,6 @@ let schema = createSchema({
 
 schema = isChatMemberDirective(schema);
 schema = authDirectiveTransformer(schema);
-
 
 export const yoga = createYoga({
   schema,

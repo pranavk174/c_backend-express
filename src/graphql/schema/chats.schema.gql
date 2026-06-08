@@ -55,6 +55,14 @@ type Chat {
   reactions: [reaction]!
 }
 
+type Message {
+  id: Int!
+  chat_id: Int!
+  sender_id: Int!
+  content: String!
+  created_at: String!
+}
+
 # type reactions {
 #   items: [reaction]!
 # }
@@ -123,4 +131,8 @@ extend type Mutation {
   forwardMessage(input: ChatInput!): chatApiResponse! @auth @isChatMember
   seenMessage(input: ChatInput!): chatApiResponse! @auth @isChatMember
   setWallpaper(url: String!): chatApiResponse! @auth
+}
+
+extend type Subscription {
+  newMessage(chat_id: Int!): Message!
 }

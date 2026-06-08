@@ -22,6 +22,7 @@ import {
   MESSAGE_SEEN,
   NEW_NOTIFICATION,
   NEW_MESSAGE_ALERT,
+  EDIT_MESSAGE,
 } from "../../utils/events.js";
 export const sendMessage = async (socket, payload, data, callback) => {
   console.log(data, "new messageeeeee");
@@ -441,6 +442,89 @@ export const seenMessage = async (socket, payload, data, callback) => {
       error: error.message,
       userId: payload,
       message_ids,
+    });
+  }
+};
+
+export const editMessage = async (socket, payload, data, callback) => {
+  console.log(data, "seen dataaa");
+  const { message_ids, content, chat_id } = data;
+  if (message_ids.length < 1 || !content) {
+    return callback({
+      message: "Data is missing",
+      success: false,
+      status: 400,
+    });
+  }
+
+  const message_id = message_ids[0];
+  try {
+    const messageData = await prisma.$queryRaw`
+        
+        select id,content,sender_id from message where id = ${message_id} and is_deleted = false limit 1
+        
+        `;
+
+    // console.log(messageData, "message dataaa.");
+
+    if (messageData.length < 1) {
+      throw new Error("This message does not exist or has been deleted");
+    }
+
+    if (messageData[0].sender_id !== payload.userId) {
+      throw new Error("You can only edit your message!");
+    }
+
+    const [editMessage, updateMessage] = await Promise.all([
+      prisma.$queryRaw`
+
+          insert into edit_message (message_id ,content ,old_content) values(${message_id},${content},${messageData[0].content})
+
+          `,
+      prisma.$queryRaw`
+
+UPDATE message
+SET 
+    content = ${content},
+    is_edited = true
+WHERE id = ${message_id}    returning *
+
+`,
+    ]);
+
+    if (!editMessage || !updateMessage) {
+      throw new Error("Error in Updating");
+    }
+
+    // console.log(
+    //   "yes condition....................",
+    //   userSocketIDs,
+    //   receiverSocketId,
+    // );
+
+    const data = updateMessage.map((d) => ({
+      id: d.id,
+      content: d.content,
+      is_edited: true,
+    }));
+
+    console.log(data, "dartaaa vent");
+    // socket.to(receiverSocketId).emit(MESSAGE_SEEN, data);
+    socket.to(`chat:${chat_id}`).emit(EDIT_MESSAGE, data[0]);
+    // }
+
+    return callback({
+      message: "Message Edited successfully",
+      status: 201,
+      success: true,
+      data: updateMessage[0],
+    });
+  } catch (err) {
+    return callback({
+      message: "Something went Wrong",
+      status: 500,
+      success: false,
+      error: err.message,
     });
   }
 };

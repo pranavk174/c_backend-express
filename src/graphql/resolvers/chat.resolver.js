@@ -1,5 +1,6 @@
 import prisma from "../../../prisma/prisma-client.js";
 import { Prisma } from "@prisma/client";
+import { pubsub } from "../../lib/helpers.js";
 import { validateToken } from "../../lib/tokenvalidator.js";
 import {
   checkChatExists,
@@ -634,7 +635,7 @@ ORDER BY c.id, m.created_at DESC NULLS LAST;
         }
         const addMessage = await prisma.$queryRaw`
           
-          insert into message (content,sender_id ,created_at ,chat_id )  values(${content},${payload.userId},${new Date()},${chat_id ?? chatId}) returning id
+          insert into message (content,sender_id ,created_at ,chat_id )  values(${content},${payload.userId},${new Date()},${chat_id ?? chatId}) returning *
           
           `;
 
@@ -659,6 +660,10 @@ ORDER BY c.id, m.created_at DESC NULLS LAST;
         if (!addMessage) {
           throw new Error();
         }
+
+        console.log(addMessage, "addmessage dataaa");
+
+        await pubsub.publish(`CHAT_${chat_id}`, addMessage[0]);
 
         return {
           message: "Message sent successfully",
