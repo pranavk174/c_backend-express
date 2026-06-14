@@ -10,18 +10,18 @@ enum delete_type {
 }
 type Chats {
   chat_id: Int!
-  user_id: Int!
+  user_id: Int
   profile_pic: String
   cover_pic: String
   last_message: String
   last_message_at: String
-  blocked: Boolean!
+  blocked: Boolean
   name: String!
   chat_type: String!
   unread_count: Int!
   bio: String
-  email: String!
-  mobile: String!
+  email: String
+  mobile: String
 }
 
 type emoji {
@@ -114,6 +114,12 @@ input ChatInput {
   media: [Media!]
 }
 
+input newGroupInput {
+  groupName: String!
+  profile_pic: String
+  member_ids: [Int!]!
+}
+
 extend type Query {
   getChatById(input: ChatInput!): chatApiResponse! @auth @isChatMember
   getAllChats: chatApiResponse! @auth
@@ -124,6 +130,7 @@ extend type Query {
 extend type Mutation {
   sendMessage(input: ChatInput!): chatApiResponse! @auth
   createNewChat(member_id: Int!): chatApiResponse! @auth
+  createNewGroup(input: newGroupInput!): chatApiResponse! @auth
   editMessage(input: ChatInput!): chatApiResponse! @auth @isChatMember
   deleteMessage(input: ChatInput!): chatApiResponse! @auth @isChatMember
   replyMessage(input: ChatInput!): chatApiResponse! @auth @isChatMember

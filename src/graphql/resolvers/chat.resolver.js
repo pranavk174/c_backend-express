@@ -203,6 +203,12 @@ LIMIT ${limit}
 
 `;
 
+const members = await prisma.$query`
+
+select id from users where 
+
+`
+
         // console.dir(chats, { depth: null });
 
         if (!chats) {
@@ -240,7 +246,245 @@ LIMIT ${limit}
       const payload = ctx.user;
 
       try {
-        const chats = await prisma.$queryRaw`
+        //         const chats = await prisma.$queryRaw`
+
+        // SELECT DISTINCT ON (c.id)
+
+        //     c.id AS chat_id,
+        //     c.chat_type,
+
+        //     u.id AS user_id,
+        //     u.name,
+
+        //     CASE
+        //         WHEN active_block.user_id = ${payload.userId}
+        //         THEN true
+
+        //         ELSE false::boolean
+        //     END as blocked,
+
+        //     u.cover_pic,
+        //     CASE
+        //         WHEN active_block.blocked_user_id = ${payload.userId}
+        //         THEN 'https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png'
+
+        //         ELSE u.profile_pic
+        //     END as profile_pic,
+
+        //     CASE
+        //         WHEN active_block.blocked_user_id = ${payload.userId}
+        //         THEN ''
+
+        //         ELSE u.bio
+        //     END as bio,
+
+        //     u.email as email,
+        //     u.mobile as mobile,
+
+        //     m.id AS last_message_id,
+
+        // unread.unread_count ,
+
+        //     CASE
+        //         WHEN m.content IS NULL
+        //         THEN a.file_type::text
+
+        //         ELSE m.content
+        //     END AS last_message,
+
+        //     m.created_at AS last_message_at
+
+        // FROM chat c
+
+        // JOIN chat_member cm
+        // ON cm.chat_id = c.id
+
+        // JOIN users u
+        // ON u.id = cm.member_id
+
+        // LEFT JOIN LATERAL (
+
+        //     SELECT *
+        //     FROM block b
+
+        //     WHERE
+        //     (
+        //         (
+        //             b.user_id = ${payload.userId}
+        //             AND b.blocked_user_id = u.id
+        //         )
+
+        //         OR
+
+        //         (
+        //             b.user_id = u.id
+        //             AND b.blocked_user_id = ${payload.userId}
+        //         )
+        //     )
+
+        //     AND b.unblocked_at IS NULL
+
+        //     ORDER BY b.blocked_at DESC
+
+        //     LIMIT 1
+
+        // ) active_block ON true
+
+        // LEFT JOIN LATERAL (
+
+        //     SELECT COUNT(*)::int AS unread_count
+
+        //     FROM message msg
+
+        //     WHERE msg.chat_id = c.id
+        //       AND msg.sender_id <> ${payload.userId}
+        //       AND msg.is_deleted = false
+
+        //       AND NOT EXISTS (
+        //           SELECT 1
+        //           FROM seen_message sm
+        //           WHERE sm.message_id = msg.id
+        //             AND sm.user_id = ${payload.userId}
+        //       )
+
+        // ) unread ON true
+
+        // LEFT JOIN LATERAL (
+
+        //     SELECT *
+
+        //     FROM message message
+
+        //     WHERE
+        //         message.chat_id = c.id
+        //         AND message.is_deleted = false
+
+        //         AND NOT EXISTS (
+
+        //             SELECT 1
+
+        //             FROM block b
+
+        //             WHERE
+        //             (
+
+        //                 (
+        //                     b.user_id = ${payload.userId}
+        //                     AND b.blocked_user_id = message.sender_id
+        //                 )
+
+        //                 OR
+
+        //                 (
+        //                     b.user_id = message.sender_id
+        //                     AND b.blocked_user_id = ${payload.userId}
+        //                 )
+        //             )
+
+        //             AND message.created_at >= b.blocked_at
+
+        //             AND (
+        //                 b.unblocked_at IS NULL
+        //                 OR
+        //                 message.created_at <= b.unblocked_at
+        //             )
+        //         )
+
+        //         AND NOT EXISTS (
+        //             SELECT 1
+        //             FROM message_delete_for_me md
+        //             WHERE md.message_id = message.id
+        //             AND md.user_id = ${payload.userId}
+        //         )
+
+        //     ORDER BY message.created_at DESC
+
+        //     LIMIT 1
+
+        // ) m ON true
+
+        // LEFT JOIN attachment a
+        // ON a.message_id = m.id
+        // AND m.content IS NULL
+
+        // WHERE c.id IN (
+        //     SELECT chat_id
+        //     FROM chat_member
+        //     WHERE member_id = ${payload.userId}
+        // )
+
+        // AND u.id != ${payload.userId}
+
+        // ORDER BY c.id, m.created_at DESC NULLS LAST;
+
+        // `;
+
+        //         const groups = await prisma.$queryRaw`
+        // SELECT
+        //     g.name,
+        //     g.chat_id,
+        //     g.created_by_id,
+
+        //     c.chat_type,
+        //     CASE
+        //         WHEN g.profile_pic IS NULL
+        //         THEN 'https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png'
+        //         ELSE g.profile_pic
+        //     END AS profile_pic,
+
+        //     unread.unread_count,
+
+        //     m.id AS last_message_id,
+
+        //     CASE
+        //         WHEN m.content IS NULL
+        //         THEN a.file_type::text
+        //         ELSE m.content
+        //     END AS last_message,
+
+        //     m.created_at AS last_message_at
+
+        // FROM groups g
+
+        // JOIN chat_member my_membership
+        //   ON my_membership.chat_id = g.chat_id
+        //  AND my_membership.member_id = ${payload.userId}
+
+        // JOIN chat c
+        //   ON c.id = g.chat_id
+
+        // LEFT JOIN LATERAL (
+        //     SELECT *
+        //     FROM message m
+        //     WHERE m.chat_id = g.chat_id
+        //       AND m.is_deleted = false
+        //     ORDER BY m.created_at DESC
+        //     LIMIT 1
+        // ) m ON true
+
+        // LEFT JOIN attachment a
+        //   ON a.message_id = m.id
+        //  AND m.content IS NULL
+
+        // LEFT JOIN LATERAL (
+        //     SELECT COUNT(*)::int AS unread_count
+        //     FROM message msg
+        //     WHERE msg.chat_id = g.chat_id
+        //       AND msg.sender_id <> ${payload.userId}
+        //       AND msg.is_deleted = false
+        //       AND NOT EXISTS (
+        //           SELECT 1
+        //           FROM seen_message sm
+        //           WHERE sm.message_id = msg.id
+        //             AND sm.user_id = ${payload.userId}
+        //       )
+        // ) unread ON true
+
+        // ORDER BY m.created_at DESC NULLS LAST;
+        // `;
+
+        const [chats, groups] = await Promise.all([
+          prisma.$queryRaw`
 
 SELECT DISTINCT ON (c.id)
 
@@ -411,14 +655,87 @@ AND m.content IS NULL
 WHERE c.id IN (
     SELECT chat_id
     FROM chat_member
-    WHERE member_id = ${payload.userId}
+    WHERE member_id = ${payload.userId} 
+
 )
 
 AND u.id != ${payload.userId}
+and c.chat_type <> 'group'
 
 ORDER BY c.id, m.created_at DESC NULLS LAST;
 
-`;
+`,
+          prisma.$queryRaw`
+SELECT
+    g.name,
+    g.chat_id,
+    g.created_by_id,
+
+    c.chat_type,
+    CASE
+        WHEN g.profile_pic IS NULL
+        THEN 'https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png'
+        ELSE g.profile_pic
+    END AS profile_pic,
+
+    unread.unread_count,
+
+    m.id AS last_message_id,
+
+    CASE
+        WHEN m.content IS NULL
+        THEN a.file_type::text
+        ELSE m.content
+    END AS last_message,
+
+
+    
+
+    m.created_at AS last_message_at
+
+FROM groups g
+
+JOIN chat_member my_membership
+  ON my_membership.chat_id = g.chat_id
+ AND my_membership.member_id = ${payload.userId}
+
+JOIN chat c
+  ON c.id = g.chat_id
+
+
+
+
+LEFT JOIN LATERAL (
+    SELECT *
+    FROM message m
+    WHERE m.chat_id = g.chat_id
+      AND m.is_deleted = false
+    ORDER BY m.created_at DESC
+    LIMIT 1
+) m ON true
+
+LEFT JOIN attachment a
+  ON a.message_id = m.id
+ AND m.content IS NULL
+
+LEFT JOIN LATERAL (
+    SELECT COUNT(*)::int AS unread_count
+    FROM message msg
+    WHERE msg.chat_id = g.chat_id
+      AND msg.sender_id <> ${payload.userId}
+      AND msg.is_deleted = false
+      AND NOT EXISTS (
+          SELECT 1
+          FROM seen_message sm
+          WHERE sm.message_id = msg.id
+            AND sm.user_id = ${payload.userId}
+      )
+) unread ON true
+
+ORDER BY m.created_at DESC NULLS LAST;
+`,
+        ]);
+        console.log("group", groups);
 
         console.log(chats, "chatsssssss");
 
@@ -431,7 +748,11 @@ ORDER BY c.id, m.created_at DESC NULLS LAST;
           success: true,
           data: {
             _responseType: "AllChats",
-            items: chats,
+            items: [...chats, ...groups].sort(
+              (a, b) =>
+                new Date(b.last_message_at) - new Date(a.last_message_at),
+            ),
+            // items: chats,
           },
         };
       } catch (error) {
@@ -557,6 +878,68 @@ ORDER BY c.id, m.created_at DESC NULLS LAST;
           message: error.message,
           status: 500,
           success: false,
+        };
+      }
+    },
+    createNewGroup: async (
+      _,
+      { input: { member_ids, groupName, profile_pic = null } },
+      ctx,
+    ) => {
+      const payload = ctx.user;
+      try {
+        // if (member_ids.length <= 1) {
+        //   return {
+        //     message: "Group Can not have only One member",
+        //     success: false,
+        //     status: 400,
+        //   };
+        // }
+
+        const result = await prisma.$transaction(async (tx) => {
+          const created = await tx.$queryRaw`
+      
+      insert into chat (chat_type) values('group') returning id ;
+      
+      `;
+
+          if (!created) throw new Error("Error in creanting Chat id");
+
+          await tx.$queryRaw`
+      insert into groups (name , chat_id ,profile_pic,created_by_id) values (${groupName},${created[0].id},${profile_pic},${payload.userId});
+      `;
+
+          const members = [
+            ...member_ids.map(
+              (id) => Prisma.sql` (${created[0].id}, ${id} , 'member') `,
+            ),
+            Prisma.sql`  (${created[0].id} , ${payload.userId} , 'admin')
+      `,
+          ];
+
+          await tx.$queryRaw`
+      insert into chat_member (chat_id , member_id , role) values ${Prisma.join(members)}
+      `;
+
+          return created[0];
+        });
+
+        if (result) {
+          return {
+            message: "Successfully created Group",
+            status: 201,
+            success: true,
+          };
+        } else {
+          throw new Error();
+        }
+      } catch (error) {
+        console.log(error);
+        return {
+          message: "Error in group Creation",
+          status: 500,
+          success: false,
+          error: error.message,
         };
       }
     },
