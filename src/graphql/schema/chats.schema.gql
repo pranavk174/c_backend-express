@@ -55,6 +55,8 @@ type Chat {
   reactions: [reaction]!
 }
 
+
+
 type Message {
   id: Int!
   chat_id: Int!
@@ -84,7 +86,16 @@ type newChat {
   chat_id: Int!
 }
 
-union ChatResponse = SingleChat | AllChats | Emojis | Wallpaper | newChat
+type member {
+  member_id: Int!
+  role: String!
+}
+
+type members {
+  items: [member!]!
+}
+
+union ChatResponse = SingleChat | AllChats | Emojis | Wallpaper | newChat| members
 
 type chatApiResponse implements apiResponse {
   message: String!
@@ -123,6 +134,7 @@ input newGroupInput {
 extend type Query {
   getChatById(input: ChatInput!): chatApiResponse! @auth @isChatMember
   getAllChats: chatApiResponse! @auth
+  getMembers(input: ChatInput!): chatApiResponse @auth @isChatMember
   getEmojis: chatApiResponse!
   getWallPaper: chatApiResponse! @auth
 }

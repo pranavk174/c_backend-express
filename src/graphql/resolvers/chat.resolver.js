@@ -21,6 +21,8 @@ const chatResolver = {
         return "newChat";
       } else if (obj._responseType === "AllChats") {
         return "AllChats";
+      } else if (obj._responseType === "members") {
+        return "members";
       } else if (obj._responseType === "Wallpaper") {
         return "Wallpaper";
       }
@@ -203,11 +205,7 @@ LIMIT ${limit}
 
 `;
 
-const members = await prisma.$query`
 
-select id from users where 
-
-`
 
         // console.dir(chats, { depth: null });
 
@@ -239,6 +237,45 @@ select id from users where
           status: 500,
           success: false,
           error: err.message,
+        };
+      }
+    },
+    getMembers: async (_, { input: { chat_ids } }, ctx) => {
+      const payload = ctx;
+
+      try {
+        console.log(chat_ids, "chat idssss")
+        if (chat_ids.length === 0) {
+          throw new Error("Chat id is missing");
+        }
+        const chat_id = chat_ids[0]
+        const members = await prisma.chat_member.findMany({
+          where: {
+            chat_id: chat_id,
+          },
+          select: {
+            member_id: true,
+            role: true
+
+          },
+        });
+
+        console.log(members, "memebrsssss")
+        return {
+          data: {
+            _responseType: "members",
+            items: members,
+          },
+          message: "success",
+          success: true,
+          status: 200,
+        };
+      } catch (error) {
+        return {
+          error: error.message,
+          message: "Something went wrong",
+          success: false,
+          status: 500,
         };
       }
     },
@@ -822,7 +859,7 @@ ORDER BY m.created_at DESC NULLS LAST;
             url,
           },
         };
-      } catch (error) {}
+      } catch (error) { }
     },
   },
   Mutation: {
