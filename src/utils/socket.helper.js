@@ -1,4 +1,6 @@
-export const userSocketIDs = new Map(); // userId -> socketId
+export const chatSocketIds = new Map();
+export const notificationSocketIds = new Map();
+export const storySocketIds = new Map();
 export const onlineUsers = new Set();
 import prisma from "../../prisma/prisma-client.js";
 import { Prisma } from "@prisma/client";
@@ -93,8 +95,6 @@ AND ns.notification_id IS NULL;
   
   `;
 
-  console.log(notifications, "notificatiossssns..");
-
   if (notifications.length > 0) {
     const values = notifications.map(
       (no) => Prisma.sql`(${no.notification_id}, ${payload.userId})`,
@@ -114,7 +114,7 @@ AND ns.notification_id IS NULL;
     //   // acc.push(data);
     // }, []);
 
-    console.log(insertSeen, "insert seen npotficationssssss...");
+    // console.log(insertSeen, "insert seen npotficationssssss...");
     socket.emit(
       SEEN_NOTIFICATION,
       insertSeen.map((seen) => seen.notification_id),
@@ -148,7 +148,7 @@ export const leaveChat = (socket, data, callback) => {
 };
 
 export const getSockets = (member) => {
-  const receiverSocketId = userSocketIDs.get(String(member));
+  const receiverSocketId = chatSocketIds.get(String(member));
   return receiverSocketId;
 };
 
@@ -160,22 +160,23 @@ export const getSockets = (member) => {
  * @returns {boolean}
  */
 export const isReceiverInRoom = (io, receiverId, chatId) => {
-  const receiverSocketId = userSocketIDs.get(String(receiverId));
+  const receiverSocketId = chatSocketIds.get(String(receiverId));
   if (!receiverSocketId) return false; // receiver online hi nahi hai
-
-  const room = io.sockets.adapter.rooms.get(`chat:${chatId}`);
+  console.log(io.adapter.rooms, "ada[pyerss");
+  const room = io.adapter.rooms.get(`chat:${chatId}`);
+  console.log(room, "room dataaaaa");
   if (!room) return false; // room exist hi nahi karti
 
   return room.has(receiverSocketId);
 };
 
 export const getSocketmembers = (id) => {
-  const data = Array.from(userSocketIDs).map((d) => d[1]);
+  const data = Array.from(chatSocketIds).map((d) => d[1]);
   return data;
 };
 
 export const sendUsers = async (socket, payload) => {
-  // console.log("users online", onlineUsers, userSocketIDs);
+  // console.log("users online", onlineUsers, chatSocketIds);
 
   const users = Array.from(onlineUsers);
 

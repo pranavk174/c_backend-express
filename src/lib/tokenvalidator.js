@@ -12,7 +12,7 @@ export const validateToken = async (context) => {
     const accessToken = cookie.value;
     payload = jwt.verify(accessToken, process.env.JWT_SECRET);
   } catch (err) {
-    console.log(err, "errrrrrrrrr in validate token");
+    // console.log(err, "errrrrrrrrr in validate token");
     throw new Error("Invalid access token");
   }
 

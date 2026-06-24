@@ -1,21 +1,19 @@
 import {
   getSockets,
   isReceiverInRoom,
-  userSocketIDs,
+  chatSocketIds,
+  notificationSocketIds,
 } from "../../utils/socket.helper.js";
-import { io } from "../../index.js";
+import { chatNamespace, io, notificationNamespace } from "../../index.js";
 import prisma from "../../../prisma/prisma-client.js";
 import {
   checkMessageExists,
   chekUserExists,
   checkChatExists,
-  checkMemeberExists,
 } from "../../lib/helpers.js";
 
 import {
   REFETCH_CHATS,
-  SEND_MESSAGE,
-  REPLY_MESSAGE,
   MESSAGE_REACTION,
   NEW_MESSAGE,
   ERROR,
@@ -123,19 +121,22 @@ export const sendMessage = async (socket, payload, data, callback) => {
 
     addMessage[0] = { ...addMessage[0], seen_users: [] };
 
-    const receiverInRoom = isReceiverInRoom(io, reciever_ids[0], chat_ids[0]);
+    const receiverInRoom = isReceiverInRoom(
+      socket,
+      reciever_ids[0],
+      chat_ids[0],
+    );
     console.log("Receiver room mein hai:", receiverInRoom);
-
+    // console.log(`chat:${chat_ids[0]}`, "chat id room id");
     if (receiverInRoom) {
       // Receiver room mein hai — room pe emit karo
+
       socket.to(`chat:${chat_ids[0]}`).emit(REFETCH_CHATS, addMessage);
     } else {
-      // Receiver room mein nahi hai — direct socket ID pe emit karo (agar online ho)
-      const receiverSocketId = userSocketIDs.get(String(reciever_ids[0]));
-      // if (receiverSocketId) {
-      //   io.to(receiverSocketId).emit(REFETCH_CHATS, addMessage);
-
-      // }
+      const receiverSocketId = chatSocketIds.get(String(reciever_ids[0]));
+      const notificationRecieverSocketId = notificationSocketIds.get(
+        String(reciever_ids[0]),
+      );
 
       const res = await prisma.$queryRaw`
       
@@ -161,9 +162,15 @@ export const sendMessage = async (socket, payload, data, callback) => {
         color: "#25D366",
       };
 
-      console.log(notification, "notification dataaa");
+      // console.log(
+      //   notification,
+      //   "notification dataaa",
+      //   notificationRecieverSocketId,
+      // );
 
-      socket.to(receiverSocketId).emit(NEW_NOTIFICATION, notification);
+      notificationNamespace
+        .to(notificationRecieverSocketId)
+        .emit(NEW_NOTIFICATION, notification);
       socket.to(receiverSocketId).emit(NEW_MESSAGE_ALERT, {
         chat_id: addMessage[0].chat_id,
         chat_type: "private",
@@ -259,7 +266,7 @@ export const replyMessage = async (socket, payload, data, callback) => {
     if (receiverSocketId) {
       // console.log(
       //   "yes condition....................",
-      //   userSocketIDs,
+      //   chatSocketIds,
       //   receiverSocketId,
       // );
       socket.to(`chat:${chat_ids[0]}`).emit(NEW_MESSAGE, updated);
@@ -348,7 +355,7 @@ updated_at = CURRENT_TIMESTAMP returning *;
     if (receiverSocketId) {
       // console.log(
       //   "yes condition....................",
-      //   userSocketIDs,
+      //   chatSocketIds,
       //   receiverSocketId,
       // );
       socket.to(`chat:${chat_ids[0]}`).emit(
@@ -392,7 +399,7 @@ export const seenMessage = async (socket, payload, data, callback) => {
   }
 
   try {
-    const messageData = await checkMessageExists(prisma, message_ids);
+    await checkMessageExists(prisma, message_ids);
 
     // console.log(message_ids, "message idsss.");
 
@@ -411,7 +418,7 @@ export const seenMessage = async (socket, payload, data, callback) => {
     if (receiverSocketId) {
       // console.log(
       //   "yes condition....................",
-      //   userSocketIDs,
+      //   chatSocketIds,
       //   receiverSocketId,
       // );
 
@@ -498,7 +505,7 @@ WHERE id = ${message_id}    returning *
 
     // console.log(
     //   "yes condition....................",
-    //   userSocketIDs,
+    //   chatSocketIds,
     //   receiverSocketId,
     // );
 

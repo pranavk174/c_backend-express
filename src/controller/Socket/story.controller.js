@@ -10,7 +10,7 @@ import {
   getSocketmembers,
   getSockets,
   onlineUsers,
-  userSocketIDs,
+  chatSocketIds,
 } from "../../utils/socket.helper.js";
 
 const { story, story_likes, chat, chat_member, message } = prisma;
@@ -86,7 +86,7 @@ chat_id ,sender_id ,content ,story_id, created_at) values(${chatid[0].chat_id} ,
       `${payload.name} have Replied to your Story`,
     );
 
-    const receiverSocketId = userSocketIDs.get(String(storyData.user_id));
+    const receiverSocketId = chatSocketIds.get(String(storyData.user_id));
     socket.to(receiverSocketId).emit(NEW_NOTIFICATION, notification);
 
     // const reply = await prisma.chat_member.
@@ -136,7 +136,7 @@ export const seenStory = async (socket, payload, data, callback) => {
         
         `;
 
-    console.log(seenData, "seenDataaaa....");
+    // console.log(seenData, "seenDataaaa....");
 
     if (seenData.length > 0) {
       return callback({
@@ -167,7 +167,7 @@ export const seenStory = async (socket, payload, data, callback) => {
       "receiver socket idddddd",
 
       onlineUsers,
-      userSocketIDs,
+      chatSocketIds,
     );
 
     seen.profile_pic = payload.profile_pic;

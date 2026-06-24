@@ -205,8 +205,6 @@ LIMIT ${limit}
 
 `;
 
-
-
         // console.dir(chats, { depth: null });
 
         if (!chats) {
@@ -244,23 +242,22 @@ LIMIT ${limit}
       const payload = ctx;
 
       try {
-        console.log(chat_ids, "chat idssss")
+        console.log(chat_ids, "chat idssss");
         if (chat_ids.length === 0) {
           throw new Error("Chat id is missing");
         }
-        const chat_id = chat_ids[0]
+        const chat_id = chat_ids[0];
         const members = await prisma.chat_member.findMany({
           where: {
             chat_id: chat_id,
           },
           select: {
             member_id: true,
-            role: true
-
+            role: true,
           },
         });
 
-        console.log(members, "memebrsssss")
+        console.log(members, "memebrsssss");
         return {
           data: {
             _responseType: "members",
@@ -772,9 +769,9 @@ LEFT JOIN LATERAL (
 ORDER BY m.created_at DESC NULLS LAST;
 `,
         ]);
-        console.log("group", groups);
+        // console.log("group", groups);
 
-        console.log(chats, "chatsssssss");
+        // console.log(chats, "chatsssssss");
 
         if (!chats) {
           throw new Error();
@@ -840,8 +837,6 @@ ORDER BY m.created_at DESC NULLS LAST;
         
         `;
 
-        console.log(wallpaper, "paper....");
-
         if (wallpaper.length === 0) {
           return {
             message: "No Wallpaper Found",
@@ -859,7 +854,7 @@ ORDER BY m.created_at DESC NULLS LAST;
             url,
           },
         };
-      } catch (error) { }
+      } catch (error) {}
     },
   },
   Mutation: {

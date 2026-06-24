@@ -1,4 +1,4 @@
-import { userSocketIDs } from "../utils/socket.helper.js";
+import { chatSocketIds } from "../utils/socket.helper.js";
 import { createPubSub } from "graphql-yoga";
 
 export const checkMessageExists = async (prisma, message_ids) => {
@@ -35,7 +35,7 @@ export const chekUserExists = async (prisma, users) => {
 };
 
 export const checkMemeberExists = async (prisma, chat_id, user_id) => {
-  console.log(chat_id, user_id, "======");
+  // console.log(chat_id, user_id, "======");
   const data = await prisma.$queryRaw`
 
     SELECT member_id
@@ -54,7 +54,7 @@ export const checkMemeberExists = async (prisma, chat_id, user_id) => {
 };
 
 export const checkChatExists = async (prisma, user_id, members) => {
-  console.log(user_id, "===========", members);
+  // console.log(user_id, "===========", members);
   const data = await prisma.$queryRaw`
     
 
@@ -75,8 +75,16 @@ HAVING
 };
 
 export const getSockets = (member) => {
-  const receiverSocketId = userSocketIDs.get(String(member));
+  const receiverSocketId = chatSocketIds.get(String(member));
   return receiverSocketId;
 };
 
 export const pubsub = createPubSub();
+
+export const allowedOrigins = [
+  "http://localhost:3001",
+  "https://cfrontend-one.vercel.app",
+  "*",
+  // eslint-disable-next-line no-undef
+  process.env.FRONTEND_URL,
+];
