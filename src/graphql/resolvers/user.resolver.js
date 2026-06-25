@@ -62,20 +62,24 @@ const userResolvers = {
         const payload = ctx.user;
 
         const users = await prisma.$queryRaw`
-        
-        SELECT u.*
-        FROM users u
-        WHERE u.id <> ${payload.userId}
-        AND NOT EXISTS (
-            SELECT ${payload.userId}
-            FROM chat_member my_cm
-            JOIN chat_member other_cm
-                ON my_cm.chat_id = other_cm.chat_id
-            WHERE my_cm.member_id = ${payload.userId}
-              AND other_cm.member_id = u.id
+        SELECT
+        u.*,
+        MAX(cm.chat_id) AS chat_id
+    FROM users u
+    LEFT JOIN chat_member cm
+        ON u.id = cm.member_id
+        AND cm.chat_id IN (
+            SELECT chat_id
+            FROM chat_member
+            WHERE member_id = ${payload.userId}
         )
+    WHERE u.id <> ${payload.userId}
+    GROUP BY u.id;
+      
         
         `;
+
+        console.log(users, "users dataaaa.");
 
         if (!users) {
           throw new Error();
@@ -100,7 +104,6 @@ const userResolvers = {
         };
       }
     },
-
   },
   Mutation: {
     sendOtpMail: async (_, { email }) => {

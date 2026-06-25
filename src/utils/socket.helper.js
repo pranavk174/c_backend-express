@@ -139,7 +139,7 @@ export const leaveChat = (socket, data, callback) => {
   // onlineUsers.delete(user_id.toString());
   const users = socket.leave(`chat:${chat_id}`);
 
-  console.log("user left", socket.rooms);
+  // console.log("user left", socket.rooms);
   return callback({
     message: "user left",
     data: users,

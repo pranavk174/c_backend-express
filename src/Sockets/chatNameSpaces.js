@@ -39,7 +39,7 @@ export const chatSockets = (socket) => {
   chatSocketIds.set(payload.userId.toString(), socket.id);
   onlineUsers.add(payload.userId.toString());
 
-  sendUsers(io, payload);
+  sendUsers(socket, payload);
 
   console.log(chatSocketIds, "use socet idssss");
   // User ka socketId map mein store karo

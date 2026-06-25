@@ -42,9 +42,6 @@ app.use(
 );
 app.use(express.json());
 
-app.use("/api/v1", router);
-app.use("/graphql", yoga);
-
 // io.use(socketAthMiddleware);
 
 export const chatNamespace = io.of("/chat");
@@ -62,6 +59,8 @@ notificationNamespace.on("connection", (socket) => {
   console.log("notification connected", socket.id);
 });
 
+app.use("/api/v1", router);
+app.use("/graphql", yoga);
 server.listen(3000, () => {
   console.log("Server + Socket.IO started on port 3000");
 });

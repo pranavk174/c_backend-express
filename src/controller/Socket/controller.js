@@ -439,6 +439,7 @@ export const seenMessage = async (socket, payload, data, callback) => {
       message: "Successfully Seen message",
       status: 201,
       success: true,
+      message_ids,
     });
   } catch (error) {
     console.log(error, "error ");

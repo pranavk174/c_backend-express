@@ -9,6 +9,7 @@ import {
   chekUserExists,
 } from "../../lib/helpers.js";
 import { GraphQLError } from "graphql";
+import { chatSocketIds, onlineUsers } from "../../utils/socket.helper.js";
 const chatResolver = {
   ChatResponse: {
     __resolveType(obj) {
@@ -770,8 +771,20 @@ ORDER BY m.created_at DESC NULLS LAST;
 `,
         ]);
         // console.log("group", groups);
+        const newChats = chats.reduce((arr, idx) => {
+          const online = onlineUsers.has(idx.user_id.toString());
+          console.log(
+            online,
+            " isOnline dataaaaa",
+            onlineUsers,
+            chatSocketIds,
+            // idx,
+          );
+          arr.push({ ...idx, isOnline: online });
+          return arr;
+        }, []);
 
-        // console.log(chats, "chatsssssss");
+        // console.log(newChats, "chatsssssss");
 
         if (!chats) {
           throw new Error();
@@ -782,7 +795,7 @@ ORDER BY m.created_at DESC NULLS LAST;
           success: true,
           data: {
             _responseType: "AllChats",
-            items: [...chats, ...groups].sort(
+            items: [...newChats, ...groups].sort(
               (a, b) =>
                 new Date(b.last_message_at) - new Date(a.last_message_at),
             ),

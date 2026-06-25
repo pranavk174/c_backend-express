@@ -15,6 +15,7 @@ type User implements Email {
   bio: String
   mobile: String!
   profile_pic: String
+  chat_id: Int
   cover_pic: String
 }
 

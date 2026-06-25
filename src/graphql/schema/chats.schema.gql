@@ -16,6 +16,7 @@ type Chats {
   last_message: String
   last_message_at: String
   blocked: Boolean
+  isOnline: Boolean
   name: String!
   chat_type: String!
   unread_count: Int!
@@ -55,8 +56,6 @@ type Chat {
   reactions: [reaction]!
 }
 
-
-
 type Message {
   id: Int!
   chat_id: Int!
@@ -95,7 +94,13 @@ type members {
   items: [member!]!
 }
 
-union ChatResponse = SingleChat | AllChats | Emojis | Wallpaper | newChat| members
+union ChatResponse =
+  | SingleChat
+  | AllChats
+  | Emojis
+  | Wallpaper
+  | newChat
+  | members
 
 type chatApiResponse implements apiResponse {
   message: String!
