@@ -19,6 +19,8 @@ model users {
   account_status                               account_status          @default(active)
   account_status_changed_at                    DateTime                @default(now()) @db.Timestamptz(6)
   cover_pic                                    String?                 @db.VarChar(555)
+  version                                      String?                 @db.Uuid
+  theme                                        theme_enum?             @default(light)
   block_block_user_idTousers                   block[]                 @relation("block_user_idTousers")
   block_block_blocked_user_idTousers           block[]                 @relation("block_blocked_user_idTousers")
   chat_member                                  chat_member[]
@@ -413,4 +415,9 @@ enum roles_enum {
   admin
   member
   owner
+}
+
+enum theme_enum {
+  light
+  dark
 }

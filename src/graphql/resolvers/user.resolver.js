@@ -368,6 +368,14 @@ const userResolvers = {
             path: "/",
             maxAge: 604800, // 7 days
           });
+
+          await context.request.cookieStore?.set({
+            name: "theme",
+            value: user.theme,
+            path: "/",
+            httpOnly: false,
+            sameSite: "lax",
+          });
           return {
             message: "Login Successful",
             status: 200,
