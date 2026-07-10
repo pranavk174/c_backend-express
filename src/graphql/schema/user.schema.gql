@@ -7,6 +7,11 @@ type Otp implements Email {
   otp: String!
 }
 
+enum theme {
+  dark
+  light
+}
+
 type User implements Email {
   name: String!
   id: Int!
@@ -39,22 +44,25 @@ input UpdateUserInput {
   bio: String
   cover_pic: String
   profile_pic: String
+  theme: theme
 }
-
-
 
 type verifyOtpData {
   email: String!
   id: Int!
   is_verified: Boolean
 }
-union ResponseData = Users | User | verifyOtpData 
+union ResponseData = Users | User | verifyOtpData
 type userApiResponse implements apiResponse {
   message: String!
   status: Int!
   success: Boolean
   data: ResponseData
   error: String
+}
+
+input personalizationInput {
+  theme: theme
 }
 
 input verifyOtpInput {
@@ -88,6 +96,7 @@ extend type Mutation {
   verifyOtp(input: verifyOtpInput): userApiResponse!
   createUser(input: UserInput): userApiResponse!
   updateUser(input: UpdateUserInput): userApiResponse! @auth
+  updatePreference(input: personalizationInput!): userApiResponse! @auth
   generateRefreshToken: userApiResponse!
   logout: userApiResponse! @auth
   deleteUser(action_type: AccountStatus!): userApiResponse! @auth

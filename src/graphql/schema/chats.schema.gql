@@ -134,6 +134,7 @@ input newGroupInput {
   groupName: String!
   profile_pic: String
   member_ids: [Int!]!
+  cover_pic: String
 }
 
 extend type Query {

@@ -170,6 +170,19 @@ export const isReceiverInRoom = (io, receiverId, chatId) => {
   return room.has(receiverSocketId);
 };
 
+export const areReceiversInRoom = (io, receiverIds, chatId) => {
+  const receiverSocketIds = receiverIds.filter((recieverId) =>
+    chatSocketIds.get(String(recieverId)),
+  );
+  if (!receiverSocketIds.length === 0) return false; // receiver online hi nahi hai
+  console.log(io.adapter.rooms, "ada[pyerss");
+  const room = io.adapter.rooms.get(`chat:${chatId}`);
+  console.log(room, "room dataaaaa");
+  if (!room) return false; // room exist hi nahi karti
+
+  return room.has(receiverSocketIds);
+};
+
 export const getSocketmembers = (id) => {
   const data = Array.from(chatSocketIds).map((d) => d[1]);
   return data;

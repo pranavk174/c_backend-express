@@ -357,16 +357,22 @@ const userResolvers = {
   RETURNING *;
 `;
 
-          await context.request.cookieStore?.set("accessToken", accessToken, {
+          await context.request.cookieStore?.set({
+            name: "accessToken",
+            value: accessToken,
             httpOnly: true,
             path: "/",
-            maxAge: 900, // 15 min
+            maxAge: 900,
+            sameSite: "lax",
           });
 
-          await context.request.cookieStore?.set("refreshToken", refreshToken, {
+          await context.request.cookieStore?.set({
+            name: "refreshToken",
+            value: refreshToken,
             httpOnly: true,
             path: "/",
-            maxAge: 604800, // 7 days
+            maxAge: 604800,
+            sameSite: "lax",
           });
 
           await context.request.cookieStore?.set({
@@ -620,6 +626,43 @@ const userResolvers = {
         };
       }
     },
+    updatePreference: async (_, { input: { theme } }, ctx) => {
+      const payload = ctx.user;
+
+      try {
+        const updated = await prisma.$queryRaw`
+  
+  update  users set theme = ${theme} where id = ${payload.userId} returning *
+  
+  
+  `;
+
+        if (!updated) {
+          throw new Error("Theme Update Failed");
+        }
+
+        await ctx.request.cookieStore?.set({
+          name: "theme",
+          value: updated[0].theme,
+          path: "/",
+          httpOnly: false,
+          sameSite: "lax",
+        });
+
+        return {
+          message: "Preference Updated Successfully",
+          status: 201,
+          success: true,
+        };
+      } catch (error) {
+        return {
+          message: "Something went wrong",
+          status: 400,
+          success: false,
+          error: error.message,
+        };
+      }
+    },
     deleteUser: async (_, { action_type }, context) => {
       try {
         const payload = context.user;
@@ -684,10 +727,13 @@ const userResolvers = {
           throw new Error();
         }
 
-        await context.request.cookieStore?.delete("accessToken", {
+        await context.request.cookieStore?.delete({
+          name: "accessToken",
           path: "/",
         });
-        await context.request.cookieStore?.delete("refreshToken", {
+
+        await context.request.cookieStore?.delete({
+          name: "refreshToken",
           path: "/",
         });
         return {
@@ -743,10 +789,13 @@ const userResolvers = {
           { expiresIn: "15m" },
         );
 
-        await context.request.cookieStore?.set("accessToken", newAccessToken, {
+        await context.request.cookieStore?.set({
+          name: "accessToken",
+          value: newAccessToken,
           httpOnly: true,
           path: "/",
           maxAge: 900,
+          sameSite: "lax",
         });
 
         return {
@@ -785,10 +834,17 @@ const userResolvers = {
         });
 
         if (loggedout) {
-          await context.request.cookieStore?.delete("accessToken", {
+          await context.request.cookieStore?.delete({
+            name: "accessToken",
             path: "/",
           });
-          await context.request.cookieStore?.delete("refreshToken", {
+
+          await context.request.cookieStore?.delete({
+            name: "refreshToken",
+            path: "/",
+          });
+          await context.request.cookieStore?.delete({
+            name: "theme",
             path: "/",
           });
           return {

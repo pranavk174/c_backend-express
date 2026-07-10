@@ -45,13 +45,12 @@ export const sendMessage = async (socket, payload, data, callback) => {
     chatId = chat_ids[0];
     chat_id = chat_ids[0];
   }
-
+  console.log(reciever_ids, "type dataaa...", chat_ids);
   try {
     if (!chat_id) {
       const reciever_id = parseInt(reciever_ids[0]);
       const reciever = await chekUserExists(prisma, reciever_ids);
 
-      // console.log(typeof reciever_id, "type dataaa...");
       if (!reciever.length > 0) {
         throw new Error("Reciever Does not exists");
       }
@@ -121,27 +120,24 @@ export const sendMessage = async (socket, payload, data, callback) => {
 
     addMessage[0] = { ...addMessage[0], seen_users: [] };
 
-    const receiverInRoom = isReceiverInRoom(
-      socket,
-      reciever_ids[0],
-      chat_ids[0],
-    );
-    console.log("Receiver room mein hai:", receiverInRoom);
-    // console.log(`chat:${chat_ids[0]}`, "chat id room id");
-    if (receiverInRoom) {
-      // Receiver room mein hai — room pe emit karo
+    reciever_ids.forEach(async (reciever_id) => {
+      const receiverInRoom = isReceiverInRoom(socket, reciever_id, chat_ids[0]);
+      console.log("Receiver room mein hai:", receiverInRoom);
+      // console.log(`chat:${chat_ids[0]}`, "chat id room id");
+      if (receiverInRoom) {
+        // Receiver room mein hai — room pe emit karo
 
-      socket.to(`chat:${chat_ids[0]}`).emit(REFETCH_CHATS, addMessage);
-    } else {
-      const receiverSocketId = chatSocketIds.get(String(reciever_ids[0]));
-      const notificationRecieverSocketId = notificationSocketIds.get(
-        String(reciever_ids[0]),
-      );
+        socket.to(`chat:${chat_ids[0]}`).emit(REFETCH_CHATS, addMessage);
+      } else {
+        const receiverSocketId = chatSocketIds.get(String(reciever_id));
+        const notificationRecieverSocketId = notificationSocketIds.get(
+          String(reciever_id),
+        );
 
-      const res = await prisma.$queryRaw`
+        const res = await prisma.$queryRaw`
       
       insert into notification (reciever_id,sender_id ,notification_type,metadata) values(
-        ${reciever_ids[0]},${payload.userId},'new_message',   ${JSON.stringify({
+        ${reciever_id},${payload.userId},'new_message',   ${JSON.stringify({
           message: `You have a new Message From ${payload.name}`,
         })}::jsonb
 
@@ -152,42 +148,43 @@ export const sendMessage = async (socket, payload, data, callback) => {
       
       `;
 
-      const notification = {
-        notification_id: res[0].notification_id,
-        notification_type: res[0].notification_type,
-        name: payload.name,
-        message: res[0].metadata.message,
-        time: res[0].created_at,
-        avatar: payload.profile_pic,
-        color: "#25D366",
-      };
+        const notification = {
+          notification_id: res[0].notification_id,
+          notification_type: res[0].notification_type,
+          name: payload.name,
+          message: res[0].metadata.message,
+          time: res[0].created_at,
+          avatar: payload.profile_pic,
+          color: "#25D366",
+        };
 
-      // console.log(
-      //   notification,
-      //   "notification dataaa",
-      //   notificationRecieverSocketId,
-      // );
+        // console.log(
+        //   notification,
+        //   "notification dataaa",
+        //   notificationRecieverSocketId,
+        // );
 
-      notificationNamespace
-        .to(notificationRecieverSocketId)
-        .emit(NEW_NOTIFICATION, notification);
-      socket.to(receiverSocketId).emit(NEW_MESSAGE_ALERT, {
-        chat_id: addMessage[0].chat_id,
-        chat_type: "private",
-        user_id: payload.userId,
-        name: payload.name,
-        blocked: false,
-        cover_pic: payload.cover_pic,
-        profile_pic: payload.profile_pic,
-        bio: payload.bio,
-        email: payload.email,
-        mobile: payload.mobile,
-        last_message_id: addMessage[0].id,
-        unread_count: addMessage.length,
-        last_message: addMessage[0].content,
-        last_message_at: addMessage[0].created_at,
-      });
-    }
+        notificationNamespace
+          .to(notificationRecieverSocketId)
+          .emit(NEW_NOTIFICATION, notification);
+        socket.to(receiverSocketId).emit(NEW_MESSAGE_ALERT, {
+          chat_id: addMessage[0].chat_id,
+          chat_type: "private",
+          user_id: payload.userId,
+          name: payload.name,
+          blocked: false,
+          cover_pic: payload.cover_pic,
+          profile_pic: payload.profile_pic,
+          bio: payload.bio,
+          email: payload.email,
+          mobile: payload.mobile,
+          last_message_id: addMessage[0].id,
+          unread_count: addMessage.length,
+          last_message: addMessage[0].content,
+          last_message_at: addMessage[0].created_at,
+        });
+      }
+    });
 
     // console.log(addMessage, "chatiddddd");
     // socket.emit(REFETCH_CHATS, addMessage);
