@@ -13,7 +13,7 @@ import {
   chatSocketIds,
 } from "../../utils/socket.helper.js";
 
-const { story, story_likes, chat, chat_member, message } = prisma;
+const { story, story_likes, chat, chat_member } = prisma;
 export const replyStory = async (socket, payload, data, callback) => {
   const { id, content } = data;
 

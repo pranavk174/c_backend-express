@@ -26,6 +26,9 @@ jobs:
           echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env
           echo "DIRECT_URL=${{ secrets.DIRECT_URL }}" >> .env
           echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
+      
+      - name: Setup Prisma
+        run: "node -e \"console.log(process.env.DIRECT_URL ? 'DIRECT_URL exists' : 'DIRECT_URL missing')\" && npm install && npx prisma db pull && npx prisma generate"
 
       - name: Generate Prisma Client
         run: npx prisma generate
@@ -34,6 +37,7 @@ jobs:
         run: npm install -g netlify-cli
 
       - name: Deploy To Netlify
+      
         run: |
           netlify deploy \
           --prod \

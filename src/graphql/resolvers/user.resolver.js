@@ -1,7 +1,8 @@
+/* eslint-disable no-undef */
 import prisma from "../../../prisma/prisma-client.js";
-import { sendMail } from "../../utils/nodemainler.js";
+
 import bcrypt from "bcrypt";
-import { validateToken } from "../../lib/tokenvalidator.js";
+
 import { GraphQLError } from "graphql";
 import jwt from "jsonwebtoken";
 const userResolvers = {
@@ -208,7 +209,7 @@ const userResolvers = {
       { input: { email, otp, device_id, ip_address, location, device_name } },
       context,
     ) => {
-      const { response } = context;
+  
 
       if (
         !email ||
@@ -324,7 +325,7 @@ const userResolvers = {
             user,
           });
 
-          const addToken = await prisma.$queryRaw`
+     await prisma.$queryRaw`
   INSERT INTO devices (
     user_id,
     device_id,
@@ -583,7 +584,7 @@ const userResolvers = {
       }
     },
     updateUser: async (_, { input }, context) => {
-      const payload = context.user;
+ 
       const updateData = {};
 
       for (const key in input) {
