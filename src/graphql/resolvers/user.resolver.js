@@ -5,6 +5,7 @@ import bcrypt from "bcrypt";
 
 import { GraphQLError } from "graphql";
 import jwt from "jsonwebtoken";
+import { sendMail } from "../../utils/nodemainler.js";
 const userResolvers = {
   ResponseData: {
     __resolveType(obj) {
