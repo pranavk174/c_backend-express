@@ -281,7 +281,7 @@ const userResolvers = {
           const accessToken = jwt.sign(
             { userId: user.id, device_id: device_id, email: email },
             process.env.JWT_SECRET,
-            { expiresIn: "1m" },
+            { expiresIn: "15m" },
           );
 
           const refreshToken = jwt.sign(
@@ -364,7 +364,7 @@ const userResolvers = {
             httpOnly: true,
             path: "/",
             maxAge: 900,
-            sameSite: "lax",
+            sameSite: "none",
           });
 
           await context.request.cookieStore?.set({
@@ -373,7 +373,7 @@ const userResolvers = {
             httpOnly: true,
             path: "/",
             maxAge: 604800,
-            sameSite: "lax",
+            sameSite: "none",
           });
 
           await context.request.cookieStore?.set({
@@ -796,7 +796,7 @@ const userResolvers = {
           httpOnly: true,
           path: "/",
           maxAge: 900,
-          sameSite: "lax",
+          sameSite: "none",
         });
 
         return {
