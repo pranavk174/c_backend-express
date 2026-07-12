@@ -356,25 +356,27 @@ const userResolvers = {
     expires_at = NOW() + INTERVAL '7 days'
   RETURNING *;
 `;
+          const accessExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 min
+          const refreshExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
           await context.request.cookieStore?.set({
             name: "accessToken",
             value: accessToken,
             httpOnly: true,
-            path: "/",
-            maxAge: 900,
-            sameSite: "none",
             secure: true,
+            sameSite: "none",
+            path: "/",
+            expires: accessExpires,
           });
 
           await context.request.cookieStore?.set({
             name: "refreshToken",
             value: refreshToken,
             httpOnly: true,
-            path: "/",
-            maxAge: 604800,
             secure: true,
             sameSite: "none",
+            path: "/",
+            expires: refreshExpires,
           });
 
           await context.request.cookieStore?.set({
