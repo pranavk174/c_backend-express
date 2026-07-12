@@ -137,8 +137,8 @@ const userResolvers = {
             };
           }
 
-          // const sent = await sendMail(email, otp);
-          // if (!sent) throw new Error();
+          const sent = await sendMail(email, otp);
+          if (!sent) throw new Error();
 
           await prisma.otp.upsert({
             where: { email },
@@ -160,8 +160,8 @@ const userResolvers = {
           };
         }
 
-        // const sent = await sendMail(email, otp);
-        // if (!sent) throw new Error();
+        const sent = await sendMail(email, otp);
+        if (!sent) throw new Error();
 
         // ✅ NEW USER → use register table
         const hashedOtp = await bcrypt.hash(String(otp), 10);
@@ -209,8 +209,6 @@ const userResolvers = {
       { input: { email, otp, device_id, ip_address, location, device_name } },
       context,
     ) => {
-  
-
       if (
         !email ||
         !otp ||
@@ -325,7 +323,7 @@ const userResolvers = {
             user,
           });
 
-     await prisma.$queryRaw`
+          await prisma.$queryRaw`
   INSERT INTO devices (
     user_id,
     device_id,
@@ -365,6 +363,7 @@ const userResolvers = {
             path: "/",
             maxAge: 900,
             sameSite: "none",
+            secure: true,
           });
 
           await context.request.cookieStore?.set({
@@ -373,6 +372,7 @@ const userResolvers = {
             httpOnly: true,
             path: "/",
             maxAge: 604800,
+            secure: true,
             sameSite: "none",
           });
 
@@ -381,7 +381,8 @@ const userResolvers = {
             value: user.theme,
             path: "/",
             httpOnly: false,
-            sameSite: "lax",
+            sameSite: "none",
+            secure: true,
           });
           return {
             message: "Login Successful",
@@ -584,7 +585,6 @@ const userResolvers = {
       }
     },
     updateUser: async (_, { input }, context) => {
- 
       const updateData = {};
 
       for (const key in input) {
@@ -647,7 +647,8 @@ const userResolvers = {
           value: updated[0].theme,
           path: "/",
           httpOnly: false,
-          sameSite: "lax",
+          sameSite: "none",
+          secure: true,
         });
 
         return {
@@ -793,6 +794,7 @@ const userResolvers = {
         await context.request.cookieStore?.set({
           name: "accessToken",
           value: newAccessToken,
+          secure: true,
           httpOnly: true,
           path: "/",
           maxAge: 900,
