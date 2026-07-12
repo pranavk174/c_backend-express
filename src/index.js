@@ -61,6 +61,6 @@ notificationNamespace.on("connection", (socket) => {
 
 app.use("/api/v1", router);
 app.use("/graphql", yoga);
-server.listen(3000, () => {
-  console.log("Server + Socket.IO started on port 3000");
+server.listen(process.env.PORT, () => {
+  console.log("Server + Socket.IO started on port:", process.env.PORT);
 });

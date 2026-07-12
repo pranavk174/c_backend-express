@@ -83,6 +83,7 @@ export const pubsub = createPubSub();
 
 export const allowedOrigins = [
   "http://localhost:3001",
+  "http://localhost:3000",
   "https://cfrontend-one.vercel.app",
   "https://chat-application-frontend.vercel.app",
   process.env.FRONTEND_URL,
