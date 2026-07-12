@@ -3,7 +3,7 @@ import prisma from "../../../prisma/prisma-client.js";
 import { mapSchema, getDirective, MapperKind } from "@graphql-tools/utils";
 
 import { validateToken } from "../../lib/tokenvalidator.js";
-import { checkChatExists, checkMemeberExists } from "../../lib/helpers.js";
+import { checkMemeberExists } from "../../lib/helpers.js";
 import { Prisma } from "@prisma/client";
 export function authDirectiveTransformer(schema) {
   return mapSchema(schema, {
