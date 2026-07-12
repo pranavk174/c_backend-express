@@ -138,8 +138,8 @@ const userResolvers = {
             };
           }
 
-          const sent = await sendMail(email, otp);
-          if (!sent) throw new Error();
+          // const sent = await sendMail(email, otp);
+          // if (!sent) throw new Error();
 
           await prisma.otp.upsert({
             where: { email },
@@ -161,8 +161,8 @@ const userResolvers = {
           };
         }
 
-        const sent = await sendMail(email, otp);
-        if (!sent) throw new Error();
+        // const sent = await sendMail(email, otp);
+        // if (!sent) throw new Error();
 
         // ✅ NEW USER → use register table
         const hashedOtp = await bcrypt.hash(String(otp), 10);
