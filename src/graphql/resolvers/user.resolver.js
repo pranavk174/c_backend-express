@@ -356,36 +356,28 @@ const userResolvers = {
     expires_at = NOW() + INTERVAL '7 days'
   RETURNING *;
 `;
-          const accessExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 min
-          const refreshExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-
-          await context.request.cookieStore?.set({
-            name: "accessToken",
-            value: accessToken,
+          const cookieOptions = {
             httpOnly: true,
             secure: true,
             sameSite: "none",
             path: "/",
-            expires: accessExpires,
+          };
+
+          context.res.cookie("accessToken", accessToken, {
+            ...cookieOptions,
+            maxAge: 15 * 60 * 1000, // 15 min in ms
           });
 
-          await context.request.cookieStore?.set({
-            name: "refreshToken",
-            value: refreshToken,
-            httpOnly: true,
-            secure: true,
-            sameSite: "none",
-            path: "/",
-            expires: refreshExpires,
+          context.res.cookie("refreshToken", refreshToken, {
+            ...cookieOptions,
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in ms
           });
 
-          await context.request.cookieStore?.set({
-            name: "theme",
-            value: user.theme,
-            path: "/",
+          context.res.cookie("theme", user.theme, {
             httpOnly: false,
-            sameSite: "none",
             secure: true,
+            sameSite: "none",
+            path: "/",
           });
           return {
             message: "Login Successful",
@@ -645,13 +637,11 @@ const userResolvers = {
           throw new Error("Theme Update Failed");
         }
 
-        await ctx.request.cookieStore?.set({
-          name: "theme",
-          value: updated[0].theme,
-          path: "/",
+        await ctx.res.cookie("theme", updated[0].theme, {
           httpOnly: false,
-          sameSite: "none",
           secure: true,
+          sameSite: "none",
+          path: "/",
         });
 
         return {
@@ -732,22 +722,13 @@ const userResolvers = {
           throw new Error();
         }
 
-        await context.request.cookieStore?.delete({
-          name: "accessToken",
-          path: "/",
-        });
-
-        await context.request.cookieStore?.delete({
-          name: "refreshToken",
-          path: "/",
-        });
+        context.res.clearCookie("accessToken", { path: "/" });
+        context.res.clearCookie("refreshToken", { path: "/" });
         return {
           message: `User ${action_type === "delete" ? "Deleted" : "Suspended"} Successfully`,
           status: 200,
           success: true,
         };
-
-        // await context.request.cookieStore?.delete("accessToken", {
       } catch (err) {
         console.log(err.message, "errror");
         return {
@@ -760,10 +741,10 @@ const userResolvers = {
     },
     generateRefreshToken: async (_, __, context) => {
       try {
-        const cookie = await context.request.cookieStore?.get("refreshToken");
+        const cookie = context.req.cookies?.refreshToken;
         if (!cookie) throw new Error("No refresh token");
 
-        const refreshToken = cookie.value;
+        const refreshToken = cookie;
         console.log(refreshToken);
         let payload;
 
@@ -794,14 +775,12 @@ const userResolvers = {
           { expiresIn: "15m" },
         );
 
-        await context.request.cookieStore?.set({
-          name: "accessToken",
-          value: newAccessToken,
-          secure: true,
+        await context.res.cookie("accessToken", newAccessToken, {
           httpOnly: true,
-          path: "/",
-          maxAge: 900,
+          secure: true,
           sameSite: "none",
+          path: "/",
+          maxAge: 15 * 60 * 1000, // 15 min in ms
         });
 
         return {
@@ -811,8 +790,8 @@ const userResolvers = {
         };
       } catch (error) {
         console.log(error, "error in  generated token...");
-        await context.request.cookieStore?.delete("accessToken");
-        await context.request.cookieStore?.delete("refreshToken");
+        context.res.clearCookie("accessToken", { path: "/" });
+        context.res.clearCookie("refreshToken", { path: "/" });
         return {
           message: "Failed to refresh token",
           success: false,
@@ -840,19 +819,9 @@ const userResolvers = {
         });
 
         if (loggedout) {
-          await context.request.cookieStore?.delete({
-            name: "accessToken",
-            path: "/",
-          });
-
-          await context.request.cookieStore?.delete({
-            name: "refreshToken",
-            path: "/",
-          });
-          await context.request.cookieStore?.delete({
-            name: "theme",
-            path: "/",
-          });
+          context.res.clearCookie("accessToken", { path: "/" });
+          context.res.clearCookie("refreshToken", { path: "/" });
+          context.res.clearCookie("theme", { path: "/" });
           return {
             message: "Logout successful",
             success: true,

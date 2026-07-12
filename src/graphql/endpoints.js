@@ -65,6 +65,10 @@ schema = authDirectiveTransformer(schema);
 export const yoga = createYoga({
   schema,
   graphqlEndpoint: "/graphql",
+  context: ({ req, res }) => ({
+    req,
+    res,
+  }),
   plugins: [
     useCookies(),
     useJWT({
