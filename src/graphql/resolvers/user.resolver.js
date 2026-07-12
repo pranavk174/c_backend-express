@@ -191,7 +191,7 @@ const userResolvers = {
         }
 
         return {
-          message: "Otp Send Successfully",
+          message: `Otp Send Successfully ${otp}`,
           status: 201,
           success: true,
         };
