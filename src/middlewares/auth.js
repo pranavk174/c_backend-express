@@ -33,8 +33,9 @@ export const socketAthMiddleware = async (socket, next) => {
   try {
     const cookies = cookie.parse(socket.handshake.headers.cookie || "");
 
+    console.log(cookies, "cookies data in auth middleware");
     const token = cookies.accessToken;
-    // console.log(token, "token dataa..");
+    console.log(token, "token dataa..",cookies);
 
     const payload = await validateCookie(token);
 
