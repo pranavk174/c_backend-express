@@ -1,10 +1,10 @@
 import prisma from "../../../prisma/prisma-client.js";
 import { Prisma } from "@prisma/client";
 import { pubsub } from "../../lib/helpers.js";
-import { validateToken } from "../../lib/tokenvalidator.js";
+
 import {
   checkChatExists,
-  checkMemeberExists,
+
   checkMessageExists,
   chekUserExists,
 } from "../../lib/helpers.js";
@@ -206,7 +206,7 @@ LIMIT ${limit}
 
 `;
 
-        // console.dir(chats, { depth: null });
+        console.dir(chats, { depth: null });
 
         if (!chats) {
           throw new Error();
@@ -867,7 +867,7 @@ ORDER BY m.created_at DESC NULLS LAST;
             url,
           },
         };
-      } catch (error) {}
+      } catch (error) { }
     },
   },
   Mutation: {

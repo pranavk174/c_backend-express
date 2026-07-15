@@ -290,36 +290,6 @@ const userResolvers = {
             { expiresIn: "7d" },
           );
 
-          // const refreshToken = "hwelfjhsjsdlkfjkdfjldsjlksfjkdsfjldsla";
-
-          // const addToken = await prisma.devices.upsert({
-          //   where: {
-          //     user_id_device_id: {
-          //       user_id: user.id,
-          //       device_id,
-          //     },
-          //   },
-          //   update: {
-          //     ip_address,
-          //     location,
-          //     refresh_token: refreshToken,
-          //     last_login: new Date(),
-          //     expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          //   },
-
-          //   create: {
-          //     user_id: user.id,
-          //     device_id,
-          //     ip_address,
-          //     location,
-          //     device_name,
-          //     last_login: new Date(),
-          //     created_at: new Date(),
-          //     refresh_token: refreshToken,
-          //     expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          //   },
-          // });
-
           console.log({
             user,
           });

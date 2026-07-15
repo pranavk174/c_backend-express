@@ -34,14 +34,14 @@ import {
 } from "../utils/socket.helper.js";
 
 export const chatSockets = (socket) => {
-  console.log("User connected:", socket.user, socket.id);
+  // console.log("User connected:", socket.user, socket.id);
   const payload = socket.user;
   chatSocketIds.set(payload.userId.toString(), socket.id);
   onlineUsers.add(payload.userId.toString());
 
   sendUsers(socket, payload);
 
-  console.log(chatSocketIds, "use socet idssss");
+  // console.log(chatSocketIds, "use socet idssss");
   // User ka socketId map mein store karo
   // Example event
   socket.on("message", (data) => {

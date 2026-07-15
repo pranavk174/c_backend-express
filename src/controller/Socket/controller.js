@@ -118,7 +118,9 @@ export const sendMessage = async (socket, payload, data, callback) => {
       throw new Error();
     }
 
-    addMessage[0] = { ...addMessage[0], seen_users: [] };
+    // ISO string → milliseconds
+    const ms = new Date(addMessage[0].created_at).getTime();
+    addMessage[0] = { ...addMessage[0], created_at: ms, seen_users: [] };
 
     reciever_ids.forEach(async (reciever_id) => {
       const receiverInRoom = isReceiverInRoom(socket, reciever_id, chat_ids[0]);
