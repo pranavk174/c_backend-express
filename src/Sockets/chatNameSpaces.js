@@ -4,6 +4,7 @@ import {
   replyMessage,
   reactMessage,
   editMessage,
+  sendTypingEvent,
 } from "../controller/Socket/controller.js";
 import { seenNotification } from "../controller/Socket/notification.controller.js";
 import {
@@ -24,6 +25,8 @@ import {
   STORY_SEEN,
   STORY_LIKE,
   SEEN_NOTIFICATION,
+  START_TYPING,
+  STOP_TYPING,
 } from "../utils/events.js";
 import {
   chatSocketIds,
@@ -106,6 +109,16 @@ export const chatSockets = (socket) => {
 
   socket.on(SEEN_NOTIFICATION, (data, callback) => {
     seenNotification(socket, payload, data, callback);
+  });
+
+  socket.on(START_TYPING, (data, callback) => {
+    console.log("data recieved in typing", data);
+    sendTypingEvent(socket, payload, data, callback, true);
+  });
+
+  socket.on(STOP_TYPING, (data, callback) => {
+    console.log("data stopped in typing", data);
+    sendTypingEvent(socket, payload, data, callback, false);
   });
 
   socket.on("disconnect", () => {

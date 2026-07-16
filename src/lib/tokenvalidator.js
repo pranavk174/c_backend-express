@@ -1,4 +1,16 @@
 import jwt from "jsonwebtoken";
+import { GraphQLError } from "graphql";
+
+export const errorHandler = (message, code, status) => {
+  throw new GraphQLError(message, {
+    extensions: {
+      code,
+      http: {
+        status,
+      },
+    },
+  });
+};
 
 export const validateToken = async (context) => {
   let payload;
@@ -12,8 +24,9 @@ export const validateToken = async (context) => {
     const accessToken = cookie.value;
     payload = jwt.verify(accessToken, process.env.JWT_SECRET);
   } catch (err) {
-    // console.log(err, "errrrrrrrrr in validate token");
-    throw new Error("Invalid access token");
+    console.log(err.message, "errrrrrrrrr in validate token");
+
+    throw new Error(err.message || "Invalid Access token");
   }
 
   return payload;
@@ -32,16 +45,17 @@ export const validateCookie = async (token) => {
     payload = jwt.verify(accessToken, process.env.JWT_SECRET);
   } catch (err) {
     console.log(err, "errrrrrrrrr in validate cookie");
-    throw new Error("Unauthorized");
+
+    throw new Error(err.message || "Invalid Access token");
   }
 
   return payload;
 };
 
-export const generateTokens = (user, email, device_id) => {
+export const generateTokens = (id, email, device_id) => {
   const accessToken = jwt.sign(
     {
-      userId: user.id,
+      userId: id,
       device_id,
       email,
     },
@@ -53,7 +67,7 @@ export const generateTokens = (user, email, device_id) => {
 
   const refreshToken = jwt.sign(
     {
-      userId: user.id,
+      userId: id,
       device_id,
       email,
     },

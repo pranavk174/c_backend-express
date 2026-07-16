@@ -21,6 +21,8 @@ import {
   NEW_NOTIFICATION,
   NEW_MESSAGE_ALERT,
   EDIT_MESSAGE,
+  START_TYPING,
+  STOP_TYPING,
 } from "../../utils/events.js";
 export const sendMessage = async (socket, payload, data, callback) => {
   console.log(data, "new messageeeeee");
@@ -532,6 +534,61 @@ WHERE id = ${message_id}    returning *
       status: 500,
       success: false,
       error: err.message,
+    });
+  }
+};
+
+export const sendTypingEvent = async (
+  socket,
+  payload,
+  data,
+  callback,
+  typing = false,
+) => {
+  console.log(data, "new messageeeeee");
+  const { reciever_ids, chat_id } = data;
+
+  if (!data) {
+    return callback({
+      message: "Data is missing...",
+      status: 400,
+      success: false,
+    });
+  }
+
+  // if(reciever_ids && reciever_ids.incldes(payload.userID))
+
+  try {
+    reciever_ids.forEach(async (reciever_id) => {
+      const receiverInRoom = isReceiverInRoom(socket, reciever_id, chat_id);
+      console.log("Receiver room mein hai:", receiverInRoom);
+      // console.log(`chat:${chat_ids[0]}`, "chat id room id");
+      if (receiverInRoom) {
+        // Receiver room mein hai — room pe emit karo
+
+        socket
+          .to(`chat:${chat_id}`)
+          .emit(typing ? START_TYPING : STOP_TYPING, typing);
+      }
+
+      // console.log(
+      //   notification,
+      //   "notification dataaa",
+      //   notificationRecieverSocketId,
+      // );
+    });
+
+    // console.log(addMessage, "chatiddddd");
+    // socket.emit(REFETCH_CHATS, addMessage);
+
+    // const chatData = await
+  } catch (error) {
+    console.log(error);
+    socket.emit(ERROR, error.message);
+    return callback({
+      success: false,
+      error: error.message,
+      status: 500,
     });
   }
 };

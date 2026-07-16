@@ -6,6 +6,7 @@ import bcrypt from "bcrypt";
 import { GraphQLError } from "graphql";
 import jwt from "jsonwebtoken";
 import { sendMail } from "../../utils/nodemainler.js";
+import { errorHandler, generateTokens } from "../../lib/tokenvalidator.js";
 const userResolvers = {
   ResponseData: {
     __resolveType(obj) {
@@ -51,6 +52,7 @@ const userResolvers = {
           success: true,
         };
       } catch (error) {
+        console.log(error, "error in get user");
         return {
           message: "Something went wrong",
           status: 500,
@@ -98,6 +100,7 @@ const userResolvers = {
 
         // console.log(users, "users dataaaaaa.");
       } catch (error) {
+        console.log(error, "in get userssssssss");
         return {
           message: "Something went Wrong",
           status: 500,
@@ -277,18 +280,24 @@ const userResolvers = {
           // cleanup
           await prisma.otp.delete({ where: { email } });
 
-          const accessToken = jwt.sign(
-            { userId: user.id, device_id: device_id, email: email },
-            process.env.JWT_SECRET,
-            { expiresIn: "15m" },
+          const { accessToken, refreshToken } = generateTokens(
+            user.id,
+            email,
+            device_id,
           );
 
-          const refreshToken = jwt.sign(
-            { userId: user.id, device_id: device_id, email: email },
+          // const accessToken = jwt.sign(
+          //   { userId: user.id, device_id: device_id, email: email },
+          //   process.env.JWT_SECRET,
+          //   { expiresIn: "1m" },
+          // );
 
-            process.env.REFRESH_SECRET,
-            { expiresIn: "7d" },
-          );
+          // const refreshToken = jwt.sign(
+          //   { userId: user.id, device_id: device_id, email: email },
+
+          //   process.env.REFRESH_SECRET,
+          //   { expiresIn: "7d" },
+          // );
 
           console.log({
             user,
@@ -409,14 +418,12 @@ const userResolvers = {
         console.log(error);
         // throw error;
 
-        throw new GraphQLError(error.message || "Something went wrong", {
-          extensions: {
-            code: "BAD_REQUEST",
-            http: {
-              status: 400,
-            },
-          },
-        });
+        errorHandler(
+          error.message || "Something went wrong",
+          "BAD_REQUEST",
+          400,
+        );
+
         // return {
         //   message: "Something went wrong",
         //   status: 500,
@@ -734,16 +741,13 @@ const userResolvers = {
 
         if (!device) throw new Error("Token revoked");
 
-        // 🔁 new access token generate
-        const newAccessToken = jwt.sign(
-          {
-            userId: payload.userId,
-            device_id: payload.device_id,
-            email: payload.email,
-          },
-          process.env.JWT_SECRET,
-          { expiresIn: "15m" },
+        const { accessToken: newAccessToken } = generateTokens(
+          payload.userId,
+          payload.email,
+          payload.device_id,
         );
+
+        // 🔁 new access token generate
 
         await context.res.cookie("accessToken", newAccessToken, {
           httpOnly: true,
