@@ -285,20 +285,6 @@ const userResolvers = {
             email,
             device_id,
           );
-
-          // const accessToken = jwt.sign(
-          //   { userId: user.id, device_id: device_id, email: email },
-          //   process.env.JWT_SECRET,
-          //   { expiresIn: "1m" },
-          // );
-
-          // const refreshToken = jwt.sign(
-          //   { userId: user.id, device_id: device_id, email: email },
-
-          //   process.env.REFRESH_SECRET,
-          //   { expiresIn: "7d" },
-          // );
-
           console.log({
             user,
           });
@@ -344,7 +330,7 @@ const userResolvers = {
 
           context.res.cookie("accessToken", accessToken, {
             ...cookieOptions,
-            maxAge: 15 * 60 * 1000, // 15 min in ms
+            maxAge: 24 * 60 * 60 * 1000, // 15 min in ms
           });
 
           context.res.cookie("refreshToken", refreshToken, {

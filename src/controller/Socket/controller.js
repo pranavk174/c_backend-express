@@ -194,6 +194,15 @@ export const sendMessage = async (socket, payload, data, callback) => {
     // socket.emit(REFETCH_CHATS, addMessage);
 
     // const chatData = await
+
+    return callback({
+      success: true,
+      error: "Message sent Successfully",
+      status: 201,
+      data: {
+        message: addMessage[0]
+      }
+    });
   } catch (error) {
     console.log(error);
     socket.emit(ERROR, error.message);
