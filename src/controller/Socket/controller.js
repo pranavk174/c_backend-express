@@ -200,8 +200,8 @@ export const sendMessage = async (socket, payload, data, callback) => {
       error: "Message sent Successfully",
       status: 201,
       data: {
-        message: addMessage[0]
-      }
+        message: addMessage[0],
+      },
     });
   } catch (error) {
     console.log(error);
@@ -390,7 +390,7 @@ updated_at = CURRENT_TIMESTAMP returning *;
 
     return callback({
       message: "Some thing went wrong",
-      ststu: 500,
+      status: 500,
       success: false,
       error: error.message,
     });

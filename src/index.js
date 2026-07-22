@@ -9,7 +9,7 @@ import cors from "cors";
 
 // import http from "http";
 
-import { socketAthMiddleware } from "./middlewares/auth.js";
+import { socketAuthMiddleware } from "./middlewares/auth.js";
 import { chatSockets } from "./Sockets/chatNameSpaces.js";
 import { allowedOrigins } from "./lib/helpers.js";
 import { socketServer } from "./Sockets/Socketserver.js";
@@ -42,13 +42,13 @@ app.use(
 );
 app.use(express.json());
 
-// io.use(socketAthMiddleware);
+// io.use(socketAuthMiddleware);
 
 export const chatNamespace = io.of("/chat");
 export const notificationNamespace = io.of("/notification");
 
-chatNamespace.use(socketAthMiddleware);
-notificationNamespace.use(socketAthMiddleware);
+chatNamespace.use(socketAuthMiddleware);
+notificationNamespace.use(socketAuthMiddleware);
 
 chatNamespace.on("connection", chatSockets);
 

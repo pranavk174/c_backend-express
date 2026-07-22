@@ -4,7 +4,6 @@ import { pubsub } from "../../lib/helpers.js";
 
 import {
   checkChatExists,
-
   checkMessageExists,
   chekUserExists,
 } from "../../lib/helpers.js";
@@ -867,7 +866,7 @@ ORDER BY m.created_at DESC NULLS LAST;
             url,
           },
         };
-      } catch (error) { }
+      } catch (error) {}
     },
   },
   Mutation: {
@@ -1380,7 +1379,7 @@ SET
       } catch (error) {
         return {
           message: "Sonme thing went wrong",
-          ststu: 500,
+          status: 500,
           success: false,
           error: error.message,
         };

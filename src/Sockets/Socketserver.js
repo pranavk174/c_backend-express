@@ -31,8 +31,8 @@ export const socketServer = (app) => {
 // export const chatNamespace = io.of("/chat");
 // export const notificationNamespace = io.of("/notification");
 
-// chatNamespace.use(socketAthMiddleware);
-// notificationNamespace.use(socketAthMiddleware);
+// chatNamespace.use(socketAuthMiddleware);
+// notificationNamespace.use(socketAuthMiddleware);
 
 // chatNamespace.on("connection", chatSockets);
 

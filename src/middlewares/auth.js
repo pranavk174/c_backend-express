@@ -29,7 +29,7 @@ export const authMiddleware = (req, res, next) => {
   }
 };
 
-export const socketAthMiddleware = async (socket, next) => {
+export const socketAuthMiddleware = async (socket, next) => {
   try {
     const cookies = cookie.parse(socket.handshake.headers.cookie || "");
 
@@ -58,12 +58,12 @@ export const socketAthMiddleware = async (socket, next) => {
 
     next();
   } catch (error) {
-    return {
-      message: error.message,
-      status: 401,
-      success: false,
-    };
-    // next(new Error("Unauthorized"));
+    // return {
+    //   message: error.message,
+    //   status: 401,
+    //   success: false,
+    // };
+    next(new Error(error.message));
   }
 };
 
@@ -77,8 +77,8 @@ export const corsMiddleware = cors({
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      // callback(new Error("CORS not allowed"));
-      callback(null, true);
+      callback(new Error("CORS not allowed"));
+      // callback(null, true);
     }
   },
 
