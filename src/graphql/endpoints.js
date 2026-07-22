@@ -71,18 +71,18 @@ export const yoga = createYoga({
   }),
   plugins: [
     useCookies(),
-    useJWT({
-      signingKeyProviders: [
-        createInlineSigningKeyProvider(process.env.JWT_SECRET),
-      ],
-      tokenLookupLocations: [
-        extractFromCookie({ name: "accessToken" }), // 👈 cookie se token uthao
-      ],
-      extendContext: true,
-      reject: {
-        missingToken: false, // 👈 taaki public routes chale
-        invalidToken: false,
-      },
-    }),
+    // useJWT({
+    //   signingKeyProviders: [
+    //     createInlineSigningKeyProvider(process.env.JWT_SECRET),
+    //   ],
+    //   tokenLookupLocations: [
+    //     extractFromCookie({ name: "accessToken" }), // 👈 cookie se token uthao
+    //   ],
+    //   extendContext: true,
+    //   reject: {
+    //     missingToken: true, // 👈 taaki public routes chale
+    //     invalidToken: true,
+    //   },
+    // }),
   ],
 });

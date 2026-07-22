@@ -5,9 +5,7 @@ export const errorHandler = (message, code, status) => {
   throw new GraphQLError(message, {
     extensions: {
       code,
-      http: {
-        status,
-      },
+      status,
     },
   });
 };
@@ -24,9 +22,10 @@ export const validateToken = async (context) => {
     const accessToken = cookie.value;
     payload = jwt.verify(accessToken, process.env.JWT_SECRET);
   } catch (err) {
-    console.log(err.message, "errrrrrrrrr in validate token");
+    // console.log(err.message, "errrrrrrrrr in validate token");
 
-    throw new Error(err.message || "Invalid Access token");
+    // throw new Error(err.message || "Invalid Access token");
+    return errorHandler(err.message, "Unauthenticated", 401);
   }
 
   return payload;
@@ -44,9 +43,15 @@ export const validateCookie = async (token) => {
     const accessToken = token;
     payload = jwt.verify(accessToken, process.env.JWT_SECRET);
   } catch (err) {
-    console.log(err, "errrrrrrrrr in validate cookie");
+    // console.log(err, "errrrrrrrrr in validate cookie");
 
-    throw new Error(err.message || "Invalid Access token");
+    // throw new Error(err.message || "Invalid Access token");
+    throw new GraphQLError(err.message || "Invalid Access token", {
+      extensions: {
+        code: "UNAUTHORIZEDeeeee",
+        http: { status: 401 }, // Sets HTTP status response
+      },
+    });
   }
 
   return payload;

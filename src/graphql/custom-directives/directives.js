@@ -2,7 +2,7 @@ import { defaultFieldResolver, GraphQLError } from "graphql";
 import prisma from "../../../prisma/prisma-client.js";
 import { mapSchema, getDirective, MapperKind } from "@graphql-tools/utils";
 
-import { validateToken } from "../../lib/tokenvalidator.js";
+import { errorHandler, validateToken } from "../../lib/tokenvalidator.js";
 import { checkMemeberExists } from "../../lib/helpers.js";
 import { Prisma } from "@prisma/client";
 export function authDirectiveTransformer(schema) {
@@ -26,7 +26,9 @@ export function authDirectiveTransformer(schema) {
             // ORIGINAL RESOLVER
             return await originalResolver(source, args, context, info);
           } catch (error) {
-            throw new GraphQLError(error.message || "Unauthorized");
+            console.log(error.message, "invalid data in di");
+            // throw new GraphQLError(error.message || "Unauthorized");
+            return errorHandler(error.message, "Unauthenticated", 401);
           }
         };
       }

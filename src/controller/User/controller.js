@@ -83,7 +83,7 @@ export const sendOtpEmail = async (req, res) => {
   } catch (error) {
     console.log(error, "errrorrr");
     return res.json({
-      message: "Something Went wrong",
+      message: "Something Went wrong ",
       status: 500,
       error,
     });
