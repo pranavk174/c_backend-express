@@ -1,6 +1,6 @@
 import prisma from "../../../prisma/prisma-client.js";
 import { logger } from "../../utils/logger.js";
-
+import { Prisma } from "@prisma/client";
 export const notificationResolver = {
   ResponseData: {
     __resolverType(obj) {
@@ -93,6 +93,7 @@ export const notificationResolver = {
     seenNotification: async (_, { input: { notification_ids = [] } }, ctx) => {
       const payload = ctx.user;
 
+      logger.debug(notification_ids, "notifciation idssss")
       try {
         if (notification_ids.length === 0) {
           return {
@@ -103,18 +104,29 @@ export const notificationResolver = {
         }
 
         const result = await prisma.$transaction(async (tx) => {
+
           // 1. Sirf current user ki notifications nikalo
-          const notifications = await tx.notification.findMany({
-            where: {
-              notification_id: {
-                in: notification_ids,
-              },
-              reciever_id: payload.id,
-            },
-            select: {
-              notification_id: true,
-            },
-          });
+          // const notifications = await tx.notification.findMany({
+          //   where: {
+          //     notification_id: {
+          //       in: notification_ids,
+          //     },
+          //     reciever_id: payload.id,
+          //   },
+          //   select: {
+          //     notification_id: true,
+          //   },
+          // });
+
+          const notifications = await tx.$queryRaw`
+          
+
+          select * from notification WHERE notification_id = ANY(${notification_ids}::int[]) and reciever_id = ${payload.userId} 
+
+          `
+
+
+
 
           const validIds = notifications.map((n) => n.notification_id);
 
@@ -126,17 +138,25 @@ export const notificationResolver = {
           }
 
           // 2. Already seen notifications
-          const alreadySeen = await tx.notificationSeen.findMany({
-            where: {
-              user_id: payload.id,
-              notification_id: {
-                in: validIds,
-              },
-            },
-            select: {
-              notification_id: true,
-            },
-          });
+          // const alreadySeen = await tx.notificationSeen.findMany({
+          //   where: {
+          //     user_id: payload.id,
+          //     notification_id: {
+          //       in: validIds,
+          //     },
+          //   },
+          //   select: {
+          //     notification_id: true,
+          //   },
+          // });
+
+          const alreadySeen = await tx.$queryRaw`
+          
+          select * from notification_seen where notification_id = ANY(${validIds}::int[])
+
+          `
+
+
 
           const alreadySeenIds = alreadySeen.map((n) => n.notification_id);
 
@@ -146,24 +166,40 @@ export const notificationResolver = {
           );
 
           if (newSeenIds.length > 0) {
-            await tx.notificationSeen.createMany({
-              data: newSeenIds.map((id) => ({
-                user_id: payload.id,
-                notification_id: id,
-              })),
-              skipDuplicates: true,
-            });
+            // await tx.notificationSeen.createMany({
+            //   data: newSeenIds.map((id) => ({
+            //     user_id: payload.id,
+            //     notification_id: id,
+            //   })),
+            //   skipDuplicates: true,
+            // });
 
-            await tx.notification.updateMany({
-              where: {
-                notification_id: {
-                  in: newSeenIds,
-                },
-              },
-              data: {
-                is_seen: true,
-              },
-            });
+            const values = Prisma.join(
+              newSeenIds.map((id) => Prisma.sql`(${payload.id}, ${id})`)
+            );
+
+            await tx.$queryRaw`
+  INSERT INTO notification_seen (user_id, notification_id)
+  VALUES ${values}
+  ON CONFLICT (user_id, notification_id) DO NOTHING;
+`;
+
+            // await tx.notification.updateMany({
+            //   where: {
+            //     notification_id: {
+            //       in: newSeenIds,
+            //     },
+            //   },
+            //   data: {
+            //     is_seen: true,
+            //   },
+            // });
+
+            await tx.$queryRaw`
+  UPDATE notification
+  SET is_seen = true
+  WHERE notification_id = ANY(${newSeenIds}::int[])
+`;
           }
 
           return {
@@ -180,6 +216,7 @@ export const notificationResolver = {
           ...result,
         };
       } catch (error) {
+        logger.error(error.message, "error message===")
         return {
           success: false,
           status: 500,
