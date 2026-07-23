@@ -4,6 +4,7 @@ import { validateCookie } from "../lib/tokenvalidator.js";
 import cors from "cors";
 import prisma from "../../prisma/prisma-client.js";
 import { allowedOrigins } from "../lib/helpers.js";
+import { logger } from "../utils/logger.js";
 
 export const authMiddleware = (req, res, next) => {
   try {
@@ -19,11 +20,11 @@ export const authMiddleware = (req, res, next) => {
 
     req.user = decoded;
 
-    // console.log(decoded, req.user, "req. user dataaaa.");
+    // logger.debug(decoded, req.user, "req. user dataaaa.");
 
     next();
   } catch (error) {
-    console.log(error, "errorrrrrr in middleware...");
+    logger.debug(error, "errorrrrrr in middleware...");
     req.user = null;
     next();
   }
@@ -33,9 +34,9 @@ export const socketAuthMiddleware = async (socket, next) => {
   try {
     const cookies = cookie.parse(socket.handshake.headers.cookie || "");
 
-    // console.log(cookies, "cookies data in auth middleware");
+    // logger.debug(cookies, "cookies data in auth middleware");
     const token = cookies.accessToken;
-    // console.log(token, "token dataa..",cookies);
+    // logger.debug(token, "token dataa..",cookies);
 
     const payload = await validateCookie(token);
 
@@ -53,7 +54,7 @@ export const socketAuthMiddleware = async (socket, next) => {
 
     payload.profile_pic = profile_pic[0].profile_pic;
     payload.name = profile_pic[0].name;
-    // console.log(payload , "middleware payloaddd")
+    // logger.debug(payload , "middleware payloaddd")
     socket.user = payload;
 
     next();

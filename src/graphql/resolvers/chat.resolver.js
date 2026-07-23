@@ -1,18 +1,19 @@
-import prisma from "../../../prisma/prisma-client.js";
 import { Prisma } from "@prisma/client";
+import prisma from "../../../prisma/prisma-client.js";
 import { pubsub } from "../../lib/helpers.js";
 
+import { GraphQLError } from "graphql";
 import {
   checkChatExists,
   checkMessageExists,
   chekUserExists,
 } from "../../lib/helpers.js";
-import { GraphQLError } from "graphql";
+import { logger } from "../../utils/logger.js";
 import { chatSocketIds, onlineUsers } from "../../utils/socket.helper.js";
 const chatResolver = {
   ChatResponse: {
     __resolveType(obj) {
-      // console.log(obj, "object dataaa");
+      // logger.debug(obj, "object dataaa");
       if (obj._responseType === "Emojis") {
         return "Emojis";
       } else if (obj._responseType === "SingleChat") {
@@ -214,8 +215,8 @@ LIMIT ${limit}
         const formattedChats = [...chats].reverse();
 
         const nextCursor = chats.length > 0 ? chats[chats.length - 1].id : null;
-        // console.log(JSON.stringify(formattedChats, null, 2));
-        // console.log(formattedChats)
+        // logger.debug(JSON.stringify(formattedChats, null, 2));
+        // logger.debug(formattedChats)
 
         return {
           message: "Successfully retrieved Chat",
@@ -229,7 +230,7 @@ LIMIT ${limit}
           },
         };
       } catch (err) {
-        console.log(err);
+        logger.debug(err);
         return {
           message: "Something went wrong",
           status: 500,
@@ -242,7 +243,7 @@ LIMIT ${limit}
       const payload = ctx;
 
       try {
-        console.log(chat_ids, "chat idssss");
+        logger.debug(chat_ids, "chat idssss");
         if (chat_ids.length === 0) {
           throw new Error("Chat id is missing");
         }
@@ -257,7 +258,7 @@ LIMIT ${limit}
           },
         });
 
-        console.log(members, "memebrsssss");
+        logger.debug(members, "memebrsssss");
         return {
           data: {
             _responseType: "members",
@@ -769,10 +770,10 @@ LEFT JOIN LATERAL (
 ORDER BY m.created_at DESC NULLS LAST;
 `,
         ]);
-        // console.log("group", groups);
+        // logger.debug("group", groups);
         const newChats = chats.reduce((arr, idx) => {
           const online = onlineUsers.has(idx.user_id.toString());
-          console.log(
+          logger.debug(
             online,
             " isOnline dataaaaa",
             onlineUsers,
@@ -783,7 +784,7 @@ ORDER BY m.created_at DESC NULLS LAST;
           return arr;
         }, []);
 
-        // console.log(newChats, "chatsssssss");
+        // logger.debug(newChats, "chatsssssss");
 
         if (!chats) {
           throw new Error();
@@ -802,7 +803,7 @@ ORDER BY m.created_at DESC NULLS LAST;
           },
         };
       } catch (error) {
-        console.log(error, "errorrrr ");
+        logger.debug(error, "errorrrr ");
         return {
           message: "Something went wrong",
           status: 500,
@@ -819,7 +820,7 @@ ORDER BY m.created_at DESC NULLS LAST;
         
         `;
 
-        // console.log(data, "dataaaaaa");
+        // logger.debug(data, "dataaaaaa");
 
         return {
           message: "Data get Successs",
@@ -978,7 +979,7 @@ ORDER BY m.created_at DESC NULLS LAST;
           throw new Error();
         }
       } catch (error) {
-        console.log(error);
+        logger.debug(error);
         return {
           message: "Error in group Creation",
           status: 500,
@@ -1022,7 +1023,7 @@ ORDER BY m.created_at DESC NULLS LAST;
           const reciever_id = parseInt(reciever_ids[0]);
           const reciever = await chekUserExists(prisma, reciever_ids);
 
-          // console.log(typeof reciever_id, "type dataaa...");
+          // logger.debug(typeof reciever_id, "type dataaa...");
           if (!reciever.length > 0) {
             throw new Error("Reciever Does not exists");
           }
@@ -1056,7 +1057,7 @@ ORDER BY m.created_at DESC NULLS LAST;
               throw new Error();
             }
           }
-          console.log(chatExists, "chartexistssssss");
+          logger.debug(chatExists, "chartexistssssss");
 
           chatId = chatExists[0].chat_id;
         }
@@ -1082,13 +1083,13 @@ ORDER BY m.created_at DESC NULLS LAST;
           }
         }
 
-        // console.log(chatId, "chatiddddd");
+        // logger.debug(chatId, "chatiddddd");
 
         if (!addMessage) {
           throw new Error();
         }
 
-        console.log(addMessage, "addmessage dataaa");
+        logger.debug(addMessage, "addmessage dataaa");
 
         await pubsub.publish(`CHAT_${chat_id}`, addMessage[0]);
 
@@ -1100,7 +1101,7 @@ ORDER BY m.created_at DESC NULLS LAST;
 
         // const chatData = await
       } catch (error) {
-        console.log(error);
+        logger.debug(error);
         return {
           message: "Something went wrong",
           status: 500,
@@ -1116,7 +1117,7 @@ ORDER BY m.created_at DESC NULLS LAST;
     ) => {
       const payload = ctx.user;
 
-      // console.log(message_ids, "ctx dataaaaaaaa");
+      // logger.debug(message_ids, "ctx dataaaaaaaa");
       if (message_ids.length < 1 || !content) {
         return {
           message: "Data is missing",
@@ -1133,7 +1134,7 @@ ORDER BY m.created_at DESC NULLS LAST;
         
         `;
 
-        // console.log(messageData, "message dataaa.");
+        // logger.debug(messageData, "message dataaa.");
 
         if (messageData.length < 1) {
           throw new Error("This message does not exist or has been deleted");
@@ -1202,7 +1203,7 @@ WHERE id = ${message_id}
         //   );
         // }
 
-        console.log(messageData, "message dataaaa..._..");
+        logger.debug(messageData, "message dataaaa..._..");
 
         if (delete_type === "onlyme") {
           const values = message_ids
@@ -1235,7 +1236,7 @@ WHERE id = ${message_id}
 
         `;
 
-          console.log(deleted, "deleetddddd");
+          logger.debug(deleted, "deleetddddd");
 
           if (!deleted) {
             throw new Error("Message not deleted..");
@@ -1249,7 +1250,7 @@ WHERE id = ${message_id}
           success: true,
         };
       } catch (error) {
-        console.log(error, "errorrrr");
+        logger.debug(error, "errorrrr");
         return {
           message: "Something went Wrong",
           status: 500,
@@ -1533,7 +1534,7 @@ SET
             // create forwarded message
             // =========================
 
-            console.log(
+            logger.debug(
               chatId,
               message.chat_id,
               message,
@@ -1652,7 +1653,7 @@ SET
           success: true,
         };
       } catch (error) {
-        console.log(error, "error ");
+        logger.debug(error, "error ");
         return {
           message: "Something went wrong",
           status: 500,

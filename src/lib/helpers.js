@@ -1,6 +1,8 @@
 import { chatSocketIds } from "../utils/socket.helper.js";
 import { createPubSub } from "graphql-yoga";
 
+import { logger } from "../utils/logger.js";
+
 export const checkMessageExists = async (prisma, message_ids) => {
   const data = await prisma.$queryRaw`
 
@@ -29,13 +31,13 @@ export const chekUserExists = async (prisma, users) => {
     throw new Error("Some Uers does nnot Exists or has been deleted");
   }
 
-  console.log(data);
+  logger.debug(data);
 
   return data;
 };
 
 export const checkMemeberExists = async (prisma, chat_id, user_id) => {
-  // console.log(chat_id, user_id, "======");
+  // logger.debug(chat_id, user_id, "======");
   const data = await prisma.$queryRaw`
 
     SELECT member_id
@@ -54,7 +56,7 @@ export const checkMemeberExists = async (prisma, chat_id, user_id) => {
 };
 
 export const checkChatExists = async (prisma, user_id, members) => {
-  // console.log(user_id, "===========", members);
+  // logger.debug(user_id, "===========", members);
   const data = await prisma.$queryRaw`
     
 

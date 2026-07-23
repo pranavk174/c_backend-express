@@ -1,9 +1,10 @@
 import prisma from "../../../prisma/prisma-client.js";
 import { Prisma } from "@prisma/client";
+import { logger } from "../../utils/logger.js";
 
 export const seenNotification = async (socket, payload, data, callback) => {
   try {
-    console.log(data, "data in notification seen event");
+    logger.debug(data, "data in notification seen event");
 
     const values = data.map((no) => Prisma.sql`(${no}, ${payload.userId})`);
 
@@ -22,7 +23,7 @@ export const seenNotification = async (socket, payload, data, callback) => {
       success: true,
     });
   } catch (error) {
-    console.log(error, "error in seen notifctaion..");
+    logger.debug(error, "error in seen notifctaion..");
     return callback({
       message: error.message,
       status: 500,

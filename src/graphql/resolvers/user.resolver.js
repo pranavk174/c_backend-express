@@ -3,14 +3,15 @@ import prisma from "../../../prisma/prisma-client.js";
 
 import bcrypt from "bcrypt";
 
-import { GraphQLError } from "graphql";
 import jwt from "jsonwebtoken";
 import { sendMail } from "../../utils/nodemainler.js";
 import { errorHandler, generateTokens } from "../../lib/tokenvalidator.js";
+
+import { logger } from "../../utils/logger.js";
 const userResolvers = {
   ResponseData: {
     __resolveType(obj) {
-      // console.log(obj, "object dataaa");
+      // logger.debug(obj, "object dataaa");
 
       if (obj._responseType === "verifyOtpData") {
         return "verifyOtpData";
@@ -40,7 +41,7 @@ const userResolvers = {
           throw new Error();
         }
 
-        // console.log(data, "userssss");
+        // logger.debug(data, "userssss");
 
         return {
           message: "successfully retrived",
@@ -52,7 +53,7 @@ const userResolvers = {
           success: true,
         };
       } catch (error) {
-        console.log(error, "error in get user");
+        logger.debug(error, "error in get user");
         return {
           message: "Something went wrong",
           status: 500,
@@ -70,20 +71,24 @@ const userResolvers = {
         u.*,
         MAX(cm.chat_id) AS chat_id
     FROM users u
-    LEFT JOIN chat_member cm
-        ON u.id = cm.member_id
-        AND cm.chat_id IN (
-            SELECT chat_id
-            FROM chat_member
-            WHERE member_id = ${payload.userId}
-        )
+   LEFT JOIN chat_member cm
+    ON u.id = cm.member_id
+    AND cm.chat_id IN (
+        SELECT cm2.chat_id
+        FROM chat_member cm2
+        LEFT JOIN chat c
+            ON c.id = cm2.chat_id
+        WHERE cm2.member_id = ${payload.userId}
+          AND c.chat_type = 'private'
+    )
+    
     WHERE u.id <> ${payload.userId}
     GROUP BY u.id;
       
         
         `;
 
-        console.log(users, "users dataaaa.");
+        logger.debug(users, "users dataaaa.");
 
         if (!users) {
           throw new Error();
@@ -98,9 +103,9 @@ const userResolvers = {
           },
         };
 
-        // console.log(users, "users dataaaaaa.");
+        // logger.debug(users, "users dataaaaaa.");
       } catch (error) {
-        console.log(error, "in get userssssssss");
+        logger.debug(error, "in get userssssssss");
         return {
           message: "Something went Wrong",
           status: 500,
@@ -127,7 +132,7 @@ const userResolvers = {
 
         const otp = Math.floor(100000 + Math.random() * 900000);
         const expires_at = new Date(Date.now() + 5 * 60 * 1000);
-        console.log(otp, "OTP");
+        logger.debug(otp, "OTP");
 
         if (exists) {
           if (
@@ -199,7 +204,7 @@ const userResolvers = {
           success: true,
         };
       } catch (error) {
-        console.log(error);
+        logger.debug(error);
         return {
           message: "Something Went wrong",
           status: 500,
@@ -223,7 +228,7 @@ const userResolvers = {
       ) {
         throw new Error("Data is missing");
       }
-      console.log(
+      logger.debug(
         email,
         otp,
         device_id,
@@ -261,7 +266,7 @@ const userResolvers = {
             throw new Error("Expired Otp");
           }
 
-          // console.log(
+          // logger.debug(
           //   record.otp,
           //   "record.otp1",
           //   otp,
@@ -285,7 +290,7 @@ const userResolvers = {
             email,
             device_id,
           );
-          console.log({
+          logger.debug({
             user,
           });
 
@@ -389,7 +394,7 @@ const userResolvers = {
           },
         });
 
-        console.log(is_verified, "is verifieddd");
+        logger.debug(is_verified, "is verifieddd");
 
         return {
           message: "OTP Verified Successfully",
@@ -401,7 +406,7 @@ const userResolvers = {
           },
         };
       } catch (error) {
-        console.log(error);
+        logger.debug(error);
         // throw error;
 
         errorHandler(
@@ -479,7 +484,7 @@ const userResolvers = {
 
           const expires_at = new Date(Date.now() + 5 * 60 * 1000); // 5 min
           const otp = Math.floor(100000 + Math.random() * 900000);
-          console.log(otp, "OTP");
+          logger.debug(otp, "OTP");
           // generated OTP
 
           const hashedOtp = await bcrypt.hash(otp.toString(), SALT_ROUNDS);
@@ -533,7 +538,7 @@ const userResolvers = {
           success: true,
         };
       } catch (error) {
-        console.log(error);
+        logger.debug(error);
         return {
           message: "Something went wrong",
           status: 400,
@@ -693,7 +698,7 @@ const userResolvers = {
           success: true,
         };
       } catch (err) {
-        console.log(err.message, "errror");
+        logger.debug(err.message, "errror");
         return {
           message: "Something Went Wrong",
           status: 500,
@@ -708,13 +713,13 @@ const userResolvers = {
         if (!cookie) throw new Error("No refresh token");
 
         const refreshToken = cookie;
-        console.log(refreshToken);
+        logger.debug(refreshToken);
         let payload;
 
         try {
           payload = jwt.verify(refreshToken, process.env.REFRESH_SECRET);
         } catch (err) {
-          console.log(err, "error in token....");
+          logger.debug(err, "error in token....");
           throw new Error("Invalid refresh token============");
         }
 
@@ -749,7 +754,7 @@ const userResolvers = {
           status: 200,
         };
       } catch (error) {
-        console.log(error, "error in  generated token...");
+        logger.debug(error, "error in  generated token...");
         context.res.clearCookie("accessToken", { path: "/" });
         context.res.clearCookie("refreshToken", { path: "/" });
         return {
@@ -763,7 +768,7 @@ const userResolvers = {
     logout: async (_, __, context) => {
       try {
         const payload = context.user;
-        // console.log(payload, "payloadddddd");
+        // logger.debug(payload, "payloadddddd");
 
         const loggedout = await prisma.devices.update({
           where: {
@@ -789,7 +794,7 @@ const userResolvers = {
           };
         }
       } catch (error) {
-        console.log(error);
+        logger.debug(error);
         return {
           message: "Failed to logout",
           success: false,

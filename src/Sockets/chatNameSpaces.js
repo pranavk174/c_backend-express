@@ -13,6 +13,7 @@ import {
   likeStory,
 } from "../controller/Socket/story.controller.js";
 import { io } from "../index.js";
+
 import {
   SEND_MESSAGE,
   CHAT_JOINED,
@@ -28,6 +29,7 @@ import {
   START_TYPING,
   STOP_TYPING,
 } from "../utils/events.js";
+import { logger } from "../utils/logger.js";
 import {
   chatSocketIds,
   onlineUsers,
@@ -37,56 +39,56 @@ import {
 } from "../utils/socket.helper.js";
 
 export const chatSockets = (socket) => {
-  // console.log("User connected:", socket.user, socket.id);
+  // logger.debug("User connected:", socket.user, socket.id);
   const payload = socket.user;
   chatSocketIds.set(payload.userId.toString(), socket.id);
   onlineUsers.add(payload.userId.toString());
 
   sendUsers(socket, payload);
 
-  // console.log(chatSocketIds, "use socet idssss");
+  // logger.debug(chatSocketIds, "use socet idssss");
   // User ka socketId map mein store karo
   // Example event
   socket.on("message", (data) => {
-    console.log("Message received:", data);
+    logger.debug("Message received:", data);
 
     // sab clients ko emit
     io.emit("message", data);
   });
 
   socket.on(SEND_MESSAGE, (data, callback) => {
-    // console.log(data, "new messageeeeee");
+    // logger.debug(data, "new messageeeeee");
 
     sendMessage(socket, payload, data, callback);
   });
 
   socket.on(CHAT_JOINED, (data, callback) => {
-    // console.log("chat joined in event user .....", data);
+    // logger.debug("chat joined in event user .....", data);
 
     joinChat(socket, payload, data, callback);
   });
 
   socket.on(MESSAGE_SEEN, (data, callback) => {
-    console.log("message seenbd", data, payload);
+    logger.debug("message seenbd", data, payload);
     seenMessage(socket, payload, data, callback);
   });
 
   socket.on(CHAT_LEAVED, (data, callback) => {
-    // console.log("chat ;eaft. user .....", data);
+    // logger.debug("chat ;eaft. user .....", data);
 
     leaveChat(socket, data, callback);
 
-    console.log(" socket leavedddddddd");
+    logger.debug(" socket leavedddddddd");
   });
 
   socket.on(REPLY_MESSAGE, (data, callback) => {
-    console.log(data, "new reply messageeeeee");
+    logger.debug(data, "new reply messageeeeee");
 
     replyMessage(socket, payload, data, callback);
   });
 
   socket.on(MESSAGE_REACTION, (data, callback) => {
-    console.log(data, "dataaaaaaa in reaction...");
+    logger.debug(data, "dataaaaaaa in reaction...");
 
     reactMessage(socket, payload, data, callback);
   });
@@ -112,18 +114,18 @@ export const chatSockets = (socket) => {
   });
 
   socket.on(START_TYPING, (data, callback) => {
-    console.log("data recieved in typing", data);
+    logger.debug("data recieved in typing", data);
     sendTypingEvent(socket, payload, data, callback, true);
   });
 
   socket.on(STOP_TYPING, (data, callback) => {
-    console.log("data stopped in typing", data);
+    logger.debug("data stopped in typing", data);
     sendTypingEvent(socket, payload, data, callback, false);
   });
 
   socket.on("disconnect", () => {
     onlineUsers.delete(payload.userId.toString());
-    console.log("User disconnected:", payload.userId, socket.id, onlineUsers);
+    logger.debug("User disconnected:", payload.userId, socket.id, onlineUsers);
     chatSocketIds.delete(String(payload.userId));
 
     // socket.emit(ONLINE_USERS, Array.from(onlineUsers));

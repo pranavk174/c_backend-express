@@ -6,6 +6,8 @@ import prisma from "../../prisma/prisma-client.js";
 import { Prisma } from "@prisma/client";
 import { ONLINE_USERS, SEEN_NOTIFICATION } from "./events.js";
 
+import { logger } from "./logger.js";
+
 export const checkBlocked = async (user_id, otherUserId) => {
   try {
     const blocked = await prisma.block.findFirst({
@@ -37,7 +39,7 @@ export const checkBlocked = async (user_id, otherUserId) => {
 
 export const joinChat = async (socket, payload, data, callback) => {
   const { user_id, chat_id, chatMember } = data;
-  console.log("chat joined user .....", data);
+  logger.debug("chat joined user .....", data);
   onlineUsers.add(user_id.toString());
 
   const chatMembers = await prisma.$queryRaw`
@@ -46,7 +48,7 @@ export const joinChat = async (socket, payload, data, callback) => {
   
   `;
 
-  // console.log(
+  // logger.debug(
   //   chatMembers,
   //   "chat memebrssss",
   //   chatMembers.find((member) => member.member_id !== user_id),
@@ -73,7 +75,7 @@ export const joinChat = async (socket, payload, data, callback) => {
   });
 
   if (blocked) {
-    // console.log(blocked, "blockeddd suer....");
+    // logger.debug(blocked, "blockeddd suer....");
     return callback({
       message: " You can not Join this chat , User is Blocked..",
       status: 500,
@@ -110,11 +112,11 @@ AND ns.notification_id IS NULL;
     // const seen = insertSeen.reduce((acc, idx) => {
     //   const data = idx.notification_id;
 
-    //   console.log(data, "data in redice");
+    //   logger.debug(data, "data in redice");
     //   // acc.push(data);
     // }, []);
 
-    // console.log(insertSeen, "insert seen npotficationssssss...");
+    // logger.debug(insertSeen, "insert seen npotficationssssss...");
     socket.emit(
       SEEN_NOTIFICATION,
       insertSeen.map((seen) => seen.notification_id),
@@ -123,7 +125,7 @@ AND ns.notification_id IS NULL;
 
   const users = socket.join(`chat:${chat_id}`);
 
-  // console.log(users, "user joinedddddddd", socket.rooms);
+  // logger.debug(users, "user joinedddddddd", socket.rooms);
 
   return callback({
     message: "user joined",
@@ -134,12 +136,12 @@ AND ns.notification_id IS NULL;
 
 export const leaveChat = (socket, data, callback) => {
   const { chat_id, user_id } = data;
-  // console.log("chat ;eaft. user .....", data);
+  // logger.debug("chat ;eaft. user .....", data);
 
   // onlineUsers.delete(user_id.toString());
   const users = socket.leave(`chat:${chat_id}`);
 
-  // console.log("user left", socket.rooms);
+  // logger.debug("user left", socket.rooms);
   return callback({
     message: "user left",
     data: users,
@@ -162,9 +164,9 @@ export const getSockets = (member) => {
 export const isReceiverInRoom = (io, receiverId, chatId) => {
   const receiverSocketId = chatSocketIds.get(String(receiverId));
   if (!receiverSocketId) return false; // receiver online hi nahi hai
-  console.log(io.adapter.rooms, "ada[pyerss");
+  logger.debug(io.adapter.rooms, "ada[pyerss");
   const room = io.adapter.rooms.get(`chat:${chatId}`);
-  console.log(room, "room dataaaaa");
+  logger.debug(room, "room dataaaaa");
   if (!room) return false; // room exist hi nahi karti
 
   return room.has(receiverSocketId);
@@ -175,9 +177,9 @@ export const areReceiversInRoom = (io, receiverIds, chatId) => {
     chatSocketIds.get(String(recieverId)),
   );
   if (!receiverSocketIds.length === 0) return false; // receiver online hi nahi hai
-  console.log(io.adapter.rooms, "ada[pyerss");
+  logger.debug(io.adapter.rooms, "ada[pyerss");
   const room = io.adapter.rooms.get(`chat:${chatId}`);
-  console.log(room, "room dataaaaa");
+  logger.debug(room, "room dataaaaa");
   if (!room) return false; // room exist hi nahi karti
 
   return room.has(receiverSocketIds);
@@ -189,19 +191,19 @@ export const getSocketmembers = (id) => {
 };
 
 export const sendUsers = async (socket, payload) => {
-  // console.log("users online", onlineUsers, chatSocketIds);
+  // logger.debug("users online", onlineUsers, chatSocketIds);
 
   const users = Array.from(onlineUsers);
 
-  console.log(users, "users ");
+  logger.debug(users, "users ");
 
   // for (const friend of users) {
   //   const isBlocked = await checkBlocked(payload.userId, parseInt(friend));
-  //   // console.log(isBlocked, "blocked condition....", friend);
+  //   // logger.debug(isBlocked, "blocked condition....", friend);
   //   if (isBlocked) continue;
 
   //   const member = getSockets(friend);
-  //   console.log(
+  //   logger.debug(
   //     member,
   //     "member ",
   //     payload.name,
@@ -221,7 +223,7 @@ export const sendUsers = async (socket, payload) => {
 
   const members = getSocketmembers(payload.userId);
   socket.to(members).emit(ONLINE_USERS, Array.from(onlineUsers));
-  console.log(members, "memberssss");
+  logger.debug(members, "memberssss");
 };
 
 export const createNotification = async (

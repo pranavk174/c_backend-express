@@ -2,8 +2,10 @@ import fs from "fs/promises";
 import { existsSync, mkdirSync } from "fs";
 import path from "path";
 import { v2 as cloudinary } from "cloudinary";
+import { logger } from "../../utils/logger.js";
 
 cloudinary.config({
+  // eslint-disable-next-line no-undef
   cloud_name: process.env.CLOUDINARY_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
@@ -17,7 +19,7 @@ export const start = async (req, res) => {
     await fs.mkdir(`upload/${uploadId}`, { recursive: true });
     return res.status(201).json({ uploadId, chunkSize: 1024 * 1024 });
   } catch (error) {
-    console.log(error);
+    logger.debug(error);
     return res.status(500).json({ message: "Failed to start upload" });
   }
 };
@@ -46,7 +48,7 @@ export const uploadChunk = async (req, res) => {
 
     return res.status(201).json({ message: "Chunk uploaded", success: true });
   } catch (error) {
-    console.log(error);
+    logger.debug(error);
     return res
       .status(500)
       .json({ message: "Chunk upload failed", success: false });
@@ -97,7 +99,7 @@ export const finishUpload = async (req, res) => {
       public_id: result.public_id,
     });
   } catch (error) {
-    console.log(error);
+    logger.debug(error);
     return res.status(500).json({ message: "Finish upload failed" });
   }
 };
@@ -116,7 +118,7 @@ export const cancel = async (req, res) => {
     await fs.rm(`upload/${uploadId}`, { recursive: true, force: true });
     return res.status(200).json({ message: "Upload cancelled" });
   } catch (error) {
-    console.log(error);
+    logger.debug(error);
     return res.status(500).json({ message: "Cancel failed" });
   }
 };
@@ -130,7 +132,7 @@ export const fileUpload = async (req, res) => {
         .json({ message: "No file provided", success: false });
     }
 
-    console.log(req.file, "file data..");
+    logger.debug(req.file, "file data..");
 
     // upload buffer directly to cloudinary using upload_stream
     const result = await new Promise((resolve, reject) => {
@@ -144,7 +146,7 @@ export const fileUpload = async (req, res) => {
       stream.end(req.file.buffer);
     });
 
-    console.log(result, "resu;lt.....");
+    logger.debug(result, "resu;lt.....");
 
     return res.status(200).json({
       success: true,
@@ -155,7 +157,7 @@ export const fileUpload = async (req, res) => {
       fileType: req.file.mimetype,
     });
   } catch (error) {
-    console.log(error);
+    logger.debug(error);
     return res
       .status(500)
       .json({ message: "File upload failed", success: false });

@@ -1,5 +1,6 @@
 import prisma from "../../../prisma/prisma-client.js";
 import { validateToken } from "../../lib/tokenvalidator.js";
+import { logger } from "../../utils/logger.js";
 
 const { privacy_user, privacy_settings } = prisma;
 
@@ -33,7 +34,7 @@ export const privacyResolvers = {
           throw new Error("No privacy settings found for the user");
         }
 
-        console.log(settings, "setting.....");
+        logger.debug(settings, "setting.....");
 
         return {
           message: "Successfully retrieved privacy settings",
@@ -55,10 +56,7 @@ export const privacyResolvers = {
         };
       }
     },
-    getPrivacyUsers: async (_, { privacy_id }, ctx) => {
-      const payload = ctx.user;
-      const userId = payload.userId;
-
+    getPrivacyUsers: async (_, { privacy_id }) => {
       try {
         const privacyUsers = await prisma.$queryRaw`
                                 select u.id,u.name
@@ -72,7 +70,7 @@ export const privacyResolvers = {
           throw new Error();
         }
 
-        console.log(privacyUsers, "privacyUserssss");
+        logger.debug(privacyUsers, "privacyUserssss");
 
         return {
           message: "Successfully retrieved privacy users",
@@ -200,7 +198,7 @@ export const privacyResolvers = {
           success: true,
         };
       } catch (error) {
-        // console.log(error, "error");
+        // logger.debug(error, "error");
         return {
           message: "Failed to update privacy users",
           error: error.message,

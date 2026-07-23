@@ -12,6 +12,7 @@ import {
   checkChatExists,
 } from "../../lib/helpers.js";
 
+import { logger } from "../../utils/logger.js";
 import {
   REFETCH_CHATS,
   MESSAGE_REACTION,
@@ -25,7 +26,7 @@ import {
   STOP_TYPING,
 } from "../../utils/events.js";
 export const sendMessage = async (socket, payload, data, callback) => {
-  console.log(data, "new messageeeeee");
+  logger.debug(data, "new messageeeeee");
 
   const { content, media, chat_ids, reciever_ids } = data;
   if (
@@ -47,7 +48,7 @@ export const sendMessage = async (socket, payload, data, callback) => {
     chatId = chat_ids[0];
     chat_id = chat_ids[0];
   }
-  console.log(reciever_ids, "type dataaa...", chat_ids);
+  logger.debug(reciever_ids, "type dataaa...", chat_ids);
   try {
     if (!chat_id) {
       const reciever_id = parseInt(reciever_ids[0]);
@@ -126,8 +127,8 @@ export const sendMessage = async (socket, payload, data, callback) => {
 
     reciever_ids.forEach(async (reciever_id) => {
       const receiverInRoom = isReceiverInRoom(socket, reciever_id, chat_ids[0]);
-      console.log("Receiver room mein hai:", receiverInRoom);
-      // console.log(`chat:${chat_ids[0]}`, "chat id room id");
+      logger.debug("Receiver room mein hai:", receiverInRoom);
+      // logger.debug(`chat:${chat_ids[0]}`, "chat id room id");
       if (receiverInRoom) {
         // Receiver room mein hai — room pe emit karo
 
@@ -162,7 +163,7 @@ export const sendMessage = async (socket, payload, data, callback) => {
           color: "#25D366",
         };
 
-        // console.log(
+        // logger.debug(
         //   notification,
         //   "notification dataaa",
         //   notificationRecieverSocketId,
@@ -190,7 +191,7 @@ export const sendMessage = async (socket, payload, data, callback) => {
       }
     });
 
-    // console.log(addMessage, "chatiddddd");
+    // logger.debug(addMessage, "chatiddddd");
     // socket.emit(REFETCH_CHATS, addMessage);
 
     // const chatData = await
@@ -204,7 +205,7 @@ export const sendMessage = async (socket, payload, data, callback) => {
       },
     });
   } catch (error) {
-    console.log(error);
+    logger.debug(error);
     socket.emit(ERROR, error.message);
     return callback({
       success: false,
@@ -215,7 +216,7 @@ export const sendMessage = async (socket, payload, data, callback) => {
 };
 
 export const replyMessage = async (socket, payload, data, callback) => {
-  console.log(data, "new reply messageeeeee");
+  logger.debug(data, "new reply messageeeeee");
 
   const { message_ids, chat_ids, content, media, reciever_ids } = data;
   if (message_ids.length !== 1 || (!content && !media)) {
@@ -270,11 +271,11 @@ export const replyMessage = async (socket, payload, data, callback) => {
         preview: addMedia[0].url,
       }));
     }
-    // console.log(updated, "dadasdsdsad");
+    // logger.debug(updated, "dadasdsdsad");
 
     const receiverSocketId = getSockets(reciever_ids[0]);
     if (receiverSocketId) {
-      // console.log(
+      // logger.debug(
       //   "yes condition....................",
       //   chatSocketIds,
       //   receiverSocketId,
@@ -290,7 +291,7 @@ export const replyMessage = async (socket, payload, data, callback) => {
       success: true,
     });
   } catch (error) {
-    console.log(error, "err in reply....");
+    logger.debug(error, "err in reply....");
     socket.emit(ERROR, error.message);
     return callback({
       message: error.message,
@@ -302,9 +303,9 @@ export const replyMessage = async (socket, payload, data, callback) => {
 
 export const reactMessage = async (socket, payload, data, callback) => {
   const { message_ids, chat_ids, reciever_ids, react_id: reaction_id } = data;
-  // console.log(data, "dataaaaaa");
+  // logger.debug(data, "dataaaaaa");
   if (!message_ids.length > 0 || !reaction_id) {
-    console.log("issue here......", !message_ids.length > 0, !reaction_id);
+    logger.debug("issue here......", !message_ids.length > 0, !reaction_id);
 
     socket.emit(ERROR, "data is missing");
 
@@ -359,11 +360,11 @@ updated_at = CURRENT_TIMESTAMP returning *;
       throw new Error("Reaction Failed");
     }
 
-    // console.log(updated, "updated reaction");
+    // logger.debug(updated, "updated reaction");
 
     const receiverSocketId = getSockets(reciever_ids[0]);
     if (receiverSocketId) {
-      // console.log(
+      // logger.debug(
       //   "yes condition....................",
       //   chatSocketIds,
       //   receiverSocketId,
@@ -385,7 +386,7 @@ updated_at = CURRENT_TIMESTAMP returning *;
       success: true,
     };
   } catch (error) {
-    console.log("error in reactiin", error);
+    logger.debug("error in reactiin", error);
     socket.emit(ERROR, error.message);
 
     return callback({
@@ -399,7 +400,7 @@ updated_at = CURRENT_TIMESTAMP returning *;
 
 export const seenMessage = async (socket, payload, data, callback) => {
   const { message_ids, chat_id, reciever_id } = data;
-  // console.log(data, "dataaaaaaaaaaa");
+  // logger.debug(data, "dataaaaaaaaaaa");
   if (message_ids && message_ids.length < 1) {
     return callback({
       message: "Message id is Missing",
@@ -411,7 +412,7 @@ export const seenMessage = async (socket, payload, data, callback) => {
   try {
     await checkMessageExists(prisma, message_ids);
 
-    // console.log(message_ids, "message idsss.");
+    // logger.debug(message_ids, "message idsss.");
 
     const seen = await prisma.seen_message.createManyAndReturn({
       data: message_ids.map((m) => ({
@@ -426,7 +427,7 @@ export const seenMessage = async (socket, payload, data, callback) => {
 
     const receiverSocketId = getSockets(reciever_id);
     if (receiverSocketId) {
-      // console.log(
+      // logger.debug(
       //   "yes condition....................",
       //   chatSocketIds,
       //   receiverSocketId,
@@ -438,12 +439,12 @@ export const seenMessage = async (socket, payload, data, callback) => {
         seen_at: d.seen_at,
       }));
 
-      // console.log(data, "dartaaa vent");
+      // logger.debug(data, "dartaaa vent");
       // socket.to(receiverSocketId).emit(MESSAGE_SEEN, data);
       socket.to(`chat:${chat_id}`).emit(MESSAGE_SEEN, data);
     }
 
-    // console.log(seen, "seend messagesssss");
+    // logger.debug(seen, "seend messagesssss");
 
     return callback({
       message: "Successfully Seen message",
@@ -452,7 +453,7 @@ export const seenMessage = async (socket, payload, data, callback) => {
       message_ids,
     });
   } catch (error) {
-    console.log(error, "error ");
+    logger.debug(error, "error ");
     return callback({
       message: "Something went wrong",
       status: 500,
@@ -465,7 +466,7 @@ export const seenMessage = async (socket, payload, data, callback) => {
 };
 
 export const editMessage = async (socket, payload, data, callback) => {
-  console.log(data, "seen dataaa");
+  logger.debug(data, "seen dataaa");
   const { message_ids, content, chat_id } = data;
   if (message_ids.length < 1 || !content) {
     return callback({
@@ -483,7 +484,7 @@ export const editMessage = async (socket, payload, data, callback) => {
         
         `;
 
-    // console.log(messageData, "message dataaa.");
+    // logger.debug(messageData, "message dataaa.");
 
     if (messageData.length < 1) {
       throw new Error("This message does not exist or has been deleted");
@@ -514,7 +515,7 @@ WHERE id = ${message_id}    returning *
       throw new Error("Error in Updating");
     }
 
-    // console.log(
+    // logger.debug(
     //   "yes condition....................",
     //   chatSocketIds,
     //   receiverSocketId,
@@ -526,7 +527,7 @@ WHERE id = ${message_id}    returning *
       is_edited: true,
     }));
 
-    console.log(data, "dartaaa vent");
+    logger.debug(data, "dartaaa vent");
     // socket.to(receiverSocketId).emit(MESSAGE_SEEN, data);
     socket.to(`chat:${chat_id}`).emit(EDIT_MESSAGE, data[0]);
     // }
@@ -554,7 +555,7 @@ export const sendTypingEvent = async (
   callback,
   typing = false,
 ) => {
-  console.log(data, "new messageeeeee");
+  logger.debug(data, "new messageeeeee");
   const { reciever_ids, chat_id } = data;
 
   if (!data) {
@@ -570,8 +571,8 @@ export const sendTypingEvent = async (
   try {
     reciever_ids.forEach(async (reciever_id) => {
       const receiverInRoom = isReceiverInRoom(socket, reciever_id, chat_id);
-      console.log("Receiver room mein hai:", receiverInRoom);
-      // console.log(`chat:${chat_ids[0]}`, "chat id room id");
+      logger.debug("Receiver room mein hai:", receiverInRoom);
+      // logger.debug(`chat:${chat_ids[0]}`, "chat id room id");
       if (receiverInRoom) {
         // Receiver room mein hai — room pe emit karo
 
@@ -580,19 +581,19 @@ export const sendTypingEvent = async (
           .emit(typing ? START_TYPING : STOP_TYPING, typing);
       }
 
-      // console.log(
+      // logger.debug(
       //   notification,
       //   "notification dataaa",
       //   notificationRecieverSocketId,
       // );
     });
 
-    // console.log(addMessage, "chatiddddd");
+    // logger.debug(addMessage, "chatiddddd");
     // socket.emit(REFETCH_CHATS, addMessage);
 
     // const chatData = await
   } catch (error) {
-    console.log(error);
+    logger.debug(error);
     socket.emit(ERROR, error.message);
     return callback({
       success: false,

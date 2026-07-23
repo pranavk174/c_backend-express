@@ -1,5 +1,7 @@
 import jwt from "jsonwebtoken";
 import { GraphQLError } from "graphql";
+// import { logger } from "@/utils/logger.js";
+import { logger } from "../utils/logger.js";
 
 export const errorHandler = (message, code, status) => {
   throw new GraphQLError(message, {
@@ -15,14 +17,14 @@ export const validateToken = async (context) => {
   try {
     const cookie = await context.request.cookieStore?.get("accessToken");
 
-    // console.log(cookie, "cookiessssss", context)
-    // console.log(cookie, "cookies dataaaaa");
+    // logger.debug(cookie, "cookiessssss", context)
+    // logger.debug(cookie, "cookies dataaaaa");
     if (!cookie) throw new Error("No refresh token");
 
     const accessToken = cookie.value;
     payload = jwt.verify(accessToken, process.env.JWT_SECRET);
   } catch (err) {
-    // console.log(err.message, "errrrrrrrrr in validate token");
+    // logger.debug(err.message, "errrrrrrrrr in validate token");
 
     // throw new Error(err.message || "Invalid Access token");
     return errorHandler(err.message, "Unauthenticated", 401);
@@ -36,14 +38,14 @@ export const validateCookie = async (token) => {
   try {
     const cookie = token;
 
-    // console.log(cookie, "cookiessssss", context)
-    // console.log(cookie, "cookies dataaaaa");
+    // logger.debug(cookie, "cookiessssss", context)
+    // logger.debug(cookie, "cookies dataaaaa");
     if (!cookie) throw new Error("No Access token");
 
     const accessToken = token;
     payload = jwt.verify(accessToken, process.env.JWT_SECRET);
   } catch (err) {
-    // console.log(err, "errrrrrrrrr in validate cookie");
+    // logger.debug(err, "errrrrrrrrr in validate cookie");
 
     // throw new Error(err.message || "Invalid Access token");
     throw new GraphQLError(err.message || "Invalid Access token", {

@@ -11,6 +11,9 @@ type notification {
 type notifications {
   items: [notification]!
 }
+input notificationInput {
+  notification_ids: [Int!]!
+}
 
 union NotificationResponse = notifications
 
@@ -24,4 +27,7 @@ type notificationApiResponse implements apiResponse {
 
 extend type Query {
   getNotification: notificationApiResponse! @auth
+}
+extend type Mutation {
+  seenNotification(input: notificationInput!): notificationApiResponse! @auth
 }

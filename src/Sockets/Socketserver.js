@@ -37,5 +37,5 @@ export const socketServer = (app) => {
 // chatNamespace.on("connection", chatSockets);
 
 // notificationNamespace.on("connection", (socket) => {
-//   console.log("notification connected", socket.id);
+//   logger.debug("notification connected", socket.id);
 // });

@@ -2,7 +2,7 @@ import "dotenv/config";
 import { yoga } from "./graphql/endpoints.js";
 // import { Server } from "socket.io";
 import express from "express";
-
+import { logger } from "./utils/logger.js";
 import router from "./routes/route.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
@@ -56,11 +56,11 @@ notificationNamespace.on("connection", (socket) => {
   const payload = socket.user;
   notificationSocketIds.set(payload.userId.toString(), socket.id);
   socket.join(`user:${socket.user._id}`);
-  console.log("notification connected", socket.id);
+  logger.debug("notification connected", socket.id);
 });
 
 app.use("/api/v1", router);
 app.use("/graphql", yoga);
 server.listen(process.env.PORT, () => {
-  console.log("Server + Socket.IO started on port:", process.env.PORT);
+  logger.debug("Server + Socket.IO started on port:", process.env.PORT);
 });

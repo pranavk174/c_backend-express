@@ -1,4 +1,5 @@
 import prisma from "../../../prisma/prisma-client.js";
+import { logger } from "../../utils/logger.js";
 import { sendMail } from "../../utils/nodemainler.js";
 
 export const sendOtpEmail = async (req, res) => {
@@ -13,7 +14,7 @@ export const sendOtpEmail = async (req, res) => {
     const schemaResult = await prisma.$queryRawUnsafe(
       "SELECT current_schema()",
     );
-    console.log(schemaResult, "result..");
+    logger.debug(schemaResult, "result..");
     const exists = await prisma.users.findFirst({
       where: {
         email: email,
@@ -28,7 +29,7 @@ export const sendOtpEmail = async (req, res) => {
 
     const otp = Math.floor(100000 + Math.random() * 900000);
 
-    console.log(email, "wmIL...");
+    logger.debug(email, "wmIL...");
     const sent = await sendMail(email, otp);
 
     if (!sent) {
@@ -81,7 +82,7 @@ export const sendOtpEmail = async (req, res) => {
 
     // const update =
   } catch (error) {
-    console.log(error, "errrorrr");
+    logger.debug(error, "errrorrr");
     return res.json({
       message: "Something Went wrong ",
       status: 500,
@@ -92,7 +93,7 @@ export const sendOtpEmail = async (req, res) => {
 
 export const verifyOtp = async (req, res) => {
   const { otp, email } = req.body;
-  console.log("started...");
+  logger.debug("started...");
   try {
     const isMatched = await prisma.register.findFirst({
       where: {
@@ -148,7 +149,7 @@ export const verifyOtp = async (req, res) => {
       success: true,
     });
   } catch (error) {
-    console.log(error, "error.");
+    logger.debug(error, "error.");
     return res.json({
       message: "Something went wrong",
       status: 500,

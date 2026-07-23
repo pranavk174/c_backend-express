@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-
+import { logger } from "./logger.js";
 // Create a transporter using SMTP
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
@@ -17,7 +17,7 @@ const transporter = nodemailer.createTransport({
 
 export const sendMail = async (email, otp) => {
   try {
-    console.log(
+    logger.debug(
       { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
       "credentialsss",
     );
@@ -35,7 +35,7 @@ export const sendMail = async (email, otp) => {
 
     return false;
   } catch (err) {
-    console.log(err, "error in send mail......");
+    logger.debug(err, "error in send mail......");
 
     switch (err.code) {
       case "ECONNECTION":

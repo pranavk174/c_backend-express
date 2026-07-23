@@ -5,6 +5,7 @@ import { mapSchema, getDirective, MapperKind } from "@graphql-tools/utils";
 import { errorHandler, validateToken } from "../../lib/tokenvalidator.js";
 import { checkMemeberExists } from "../../lib/helpers.js";
 import { Prisma } from "@prisma/client";
+import { logger } from "../../utils/logger.js";
 export function authDirectiveTransformer(schema) {
   return mapSchema(schema, {
     [MapperKind.OBJECT_FIELD]: (fieldConfig) => {
@@ -15,7 +16,7 @@ export function authDirectiveTransformer(schema) {
 
         fieldConfig.resolve = async function (source, args, context, info) {
           try {
-            // console.log("AUTH DIRECTIVE RUNNING");
+            // logger.debug("AUTH DIRECTIVE RUNNING");
 
             // TOKEN VALIDATION
             const payload = await validateToken(context);
@@ -26,7 +27,7 @@ export function authDirectiveTransformer(schema) {
             // ORIGINAL RESOLVER
             return await originalResolver(source, args, context, info);
           } catch (error) {
-            console.log(error.message, "invalid data in di");
+            logger.debug(error.message, "invalid data in di");
             // throw new GraphQLError(error.message || "Unauthorized");
             return errorHandler(error.message, "Unauthenticated", 401);
           }
@@ -70,7 +71,7 @@ export const isChatMemberDirective = (schema) => {
 
   `;
 
-            // console.log(data, "dataaaaaaa");
+            // logger.debug(data, "dataaaaaaa");
             if (data.length !== args.input.chat_ids.length) {
               throw new Error("User is not a member of all chats");
             }

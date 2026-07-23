@@ -5,6 +5,7 @@ import {
   STORY_LIKE,
   STORY_SEEN,
 } from "../../utils/events.js";
+import { logger } from "../../utils/logger.js";
 import {
   createNotification,
   getSocketmembers,
@@ -18,7 +19,7 @@ export const replyStory = async (socket, payload, data, callback) => {
   const { id, content } = data;
 
   try {
-    console.log(payload, "payloadddddd");
+    logger.debug(payload, "payloadddddd");
     const storyData = await story.findFirst({
       where: { id: parseInt(id), is_deleted: false },
     });
@@ -36,7 +37,7 @@ HAVING COUNT(DISTINCT member_id) = 2;
         
         `;
 
-    console.log(chatid, "chatdataaaaaaa", storyData);
+    logger.debug(chatid, "chatdataaaaaaa", storyData);
 
     let reply = null;
     if (!chatid || chatid.length === 0) {
@@ -98,7 +99,7 @@ chat_id ,sender_id ,content ,story_id, created_at) values(${chatid[0].chat_id} ,
       data: reply,
     });
   } catch (error) {
-    console.log(error, "errorrr in story reply.");
+    logger.debug(error, "errorrr in story reply.");
     return callback({
       message: "Something went wrong",
       status: 500,
@@ -110,7 +111,7 @@ chat_id ,sender_id ,content ,story_id, created_at) values(${chatid[0].chat_id} ,
 
 export const seenStory = async (socket, payload, data, callback) => {
   const { id } = data;
-  // console.log(payload, "payload data");
+  // logger.debug(payload, "payload data");
   try {
     const storyData = await story.findFirst({
       where: { id: parseInt(id), is_deleted: false },
@@ -136,7 +137,7 @@ export const seenStory = async (socket, payload, data, callback) => {
         
         `;
 
-    // console.log(seenData, "seenDataaaa....");
+    // logger.debug(seenData, "seenDataaaa....");
 
     if (seenData.length > 0) {
       return callback({
@@ -161,7 +162,7 @@ export const seenStory = async (socket, payload, data, callback) => {
 
     const receiverSocketId = getSockets(storyData.user_id);
     const res = getSocketmembers(storyData.user_id);
-    console.log(
+    logger.debug(
       receiverSocketId,
       res,
       "receiver socket idddddd",
@@ -173,7 +174,7 @@ export const seenStory = async (socket, payload, data, callback) => {
     seen.profile_pic = payload.profile_pic;
     seen.name = payload.name;
     socket.to(receiverSocketId).emit(STORY_SEEN, seen, (response) => {
-      console.log("emitted datat in responseeee");
+      logger.debug("emitted datat in responseeee");
     });
 
     return callback({
@@ -248,13 +249,13 @@ export const likeStory = async (socket, payload, data, callback) => {
 
     const receiverSocketId = getSockets(storyData.user_id);
     const res = getSocketmembers(storyData.user_id);
-    console.log(liked, "likeddd");
+    logger.debug(liked, "likeddd");
 
     // seen.profile_pic = payload.profile_pic;
     // seen.name = payload.name;
 
     socket.to(receiverSocketId).emit(STORY_LIKE, liked, (response) => {
-      console.log("emitted datat in responseeee");
+      logger.debug("emitted datat in responseeee");
     });
 
     if (like === true) {

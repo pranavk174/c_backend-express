@@ -1,5 +1,6 @@
 import prisma from "../../../prisma/prisma-client.js";
 import { validateToken } from "../../lib/tokenvalidator.js";
+import { logger } from "../../utils/logger.js";
 
 const { story, story_likes, chat, chat_member, message } = prisma;
 
@@ -44,9 +45,9 @@ WHERE s.is_deleted = false AND s.user_id = ${payload.userId} AND s.expires_at > 
 GROUP BY s.id;
 `;
 
-        console.log(stories, "storiessss");
+        logger.debug(stories, "storiessss");
 
-        // console.log(storyData, "dataaaaaaa.");
+        // logger.debug(storyData, "dataaaaaaa.");
         if (!storyData) {
           return {
             message: "Story not found",
@@ -336,7 +337,7 @@ ORDER BY
 
 `;
 
-        // console.log(JSON.stringify(myStories, null, 2), "my SToriessssss");
+        // logger.debug(JSON.stringify(myStories, null, 2), "my SToriessssss");
 
         const stories = await prisma.$queryRaw`
 SELECT 
@@ -465,7 +466,7 @@ ORDER BY
           return acc;
         }, {});
 
-        console.log(JSON.stringify(Object.values(stories), null, 2));
+        logger.debug(JSON.stringify(Object.values(stories), null, 2));
         return {
           message: "Stories retrieved successfully",
           status: 200,
@@ -476,7 +477,7 @@ ORDER BY
           },
         };
       } catch (error) {
-        console.log(error, "errpor");
+        logger.debug(error, "errpor");
         return {
           message: "Something went wrong",
           status: 500,
@@ -539,7 +540,7 @@ ORDER BY
           success: true,
         };
       } catch (error) {
-        console.log(error, "errrorrrr in creating story...");
+        logger.debug(error, "errrorrrr in creating story...");
         return {
           message: "Something went wrong",
           status: 500,
@@ -651,7 +652,7 @@ ORDER BY
         
         `;
 
-        console.log(seenData, "seenDataaaa....");
+        logger.debug(seenData, "seenDataaaa....");
 
         if (seenData.length > 0) {
           return {
@@ -700,7 +701,7 @@ ORDER BY
       try {
         const payload = context.user;
 
-        console.log(payload, "payloadddddd");
+        logger.debug(payload, "payloadddddd");
         const storyData = await story.findFirst({
           where: { id: parseInt(id), is_deleted: false },
         });
@@ -718,7 +719,7 @@ HAVING COUNT(DISTINCT member_id) = 2;
         
         `;
 
-        console.log(chatid, "chatdataaaaaaa", storyData);
+        logger.debug(chatid, "chatdataaaaaaa", storyData);
 
         if (!chatid || chatid.length === 0) {
           const chatData = await chat.create({
