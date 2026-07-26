@@ -46,7 +46,7 @@ export const chatSockets = (socket) => {
 
   sendUsers(socket, payload);
 
-  // logger.debug(chatSocketIds, "use socet idssss");
+  logger.debug(chatSocketIds, "use socet idssss i chatName space");
   // User ka socketId map mein store karo
   // Example event
   socket.on("message", (data) => {
@@ -57,7 +57,7 @@ export const chatSockets = (socket) => {
   });
 
   socket.on(SEND_MESSAGE, (data, callback) => {
-    // logger.debug(data, "new messageeeeee");
+    logger.debug(data, "new messageeeeee");
 
     sendMessage(socket, payload, data, callback);
   });

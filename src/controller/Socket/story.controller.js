@@ -37,7 +37,7 @@ HAVING COUNT(DISTINCT member_id) = 2;
         
         `;
 
-    logger.debug(chatid, "chatdataaaaaaa", storyData);
+    // logger.debug(chatid, "chatdataaaaaaa", storyData);
 
     let reply = null;
     if (!chatid || chatid.length === 0) {

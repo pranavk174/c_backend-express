@@ -206,7 +206,7 @@ LIMIT ${limit}
 
 `;
 
-        console.dir(chats, { depth: null });
+        // console.dir(chats, { depth: null });
 
         if (!chats) {
           throw new Error();
@@ -243,7 +243,7 @@ LIMIT ${limit}
       const payload = ctx;
 
       try {
-        logger.debug(chat_ids, "chat idssss");
+        // logger.debug(chat_ids, "chat idssss");
         if (chat_ids.length === 0) {
           throw new Error("Chat id is missing");
         }
@@ -258,7 +258,7 @@ LIMIT ${limit}
           },
         });
 
-        logger.debug(members, "memebrsssss");
+        // logger.debug(members, "memebrsssss");
         return {
           data: {
             _responseType: "members",
@@ -773,13 +773,13 @@ ORDER BY m.created_at DESC NULLS LAST;
         // logger.debug("group", groups);
         const newChats = chats.reduce((arr, idx) => {
           const online = onlineUsers.has(idx.user_id.toString());
-          logger.debug(
-            online,
-            " isOnline dataaaaa",
-            onlineUsers,
-            chatSocketIds,
-            // idx,
-          );
+          // logger.debug(
+          //   online,
+          //   " isOnline dataaaaa",
+          //   onlineUsers,
+          //   chatSocketIds,
+          //   // idx,
+          // );
           arr.push({ ...idx, isOnline: online });
           return arr;
         }, []);
@@ -867,7 +867,7 @@ ORDER BY m.created_at DESC NULLS LAST;
             url,
           },
         };
-      } catch (error) {}
+      } catch (error) { }
     },
   },
   Mutation: {

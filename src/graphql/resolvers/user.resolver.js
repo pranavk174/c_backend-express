@@ -88,13 +88,11 @@ const userResolvers = {
         
         `;
 
-        logger.debug(users, "users dataaaa.");
-
         if (!users) {
           throw new Error();
         }
         return {
-          message: "Sucesfully retrieved Users",
+          message: "Successfully retrieved Users",
           status: 200,
           success: true,
           data: {
@@ -260,6 +258,11 @@ const userResolvers = {
           if (!record) {
             return { message: "OTP not found", status: 400, success: false };
           }
+          const isMatch = await bcrypt.compare(String(otp), record.otp);
+          if (!isMatch) {
+            // return { message: "Invalid OTP", status: 400, success: false };
+            throw new Error("Invalid Otp");
+          }
 
           const isExpired = new Date(record.expires_at) < new Date();
           if (isExpired) {
@@ -275,12 +278,6 @@ const userResolvers = {
           //   email,
           //   user,
           // );
-
-          const isMatch = await bcrypt.compare(String(otp), record.otp);
-          if (!isMatch) {
-            // return { message: "Invalid OTP", status: 400, success: false };
-            throw new Error("Invalid Otp");
-          }
 
           // cleanup
           await prisma.otp.delete({ where: { email } });
@@ -539,12 +536,11 @@ const userResolvers = {
         };
       } catch (error) {
         logger.debug(error);
-        return {
-          message: "Something went wrong",
-          status: 400,
-          success: false,
-          error: error.message,
-        };
+        errorHandler(
+          error.message || "Something went wrong",
+          "BAD_REQUEST",
+          500,
+        );
       }
     },
     updateUser: async (_, { input }, context) => {
@@ -557,11 +553,7 @@ const userResolvers = {
       }
 
       if (Object.keys(updateData).length === 0) {
-        return {
-          message: "Input field is missing",
-          status: 400,
-          success: false,
-        };
+        return errorHandler("Input field is missing", "BAD_REQUEST", 400);
       }
 
       try {
@@ -582,12 +574,11 @@ const userResolvers = {
           success: true,
         };
       } catch (error) {
-        return {
-          message: "Something Went Wrong",
-          status: 500,
-          success: false,
-          error: error.message,
-        };
+        errorHandler(
+          error.message || "Something went wrong",
+          "BAD_REQUEST",
+          500,
+        );
       }
     },
     updatePreference: async (_, { input: { theme } }, ctx) => {
@@ -745,7 +736,7 @@ const userResolvers = {
           secure: true,
           sameSite: "none",
           path: "/",
-          maxAge: 15 * 60 * 1000, // 15 min in ms
+          maxAge: 15 * 24 * 60 * 1000, // 15 min in ms
         });
 
         return {

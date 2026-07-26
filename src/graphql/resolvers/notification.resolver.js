@@ -93,7 +93,7 @@ export const notificationResolver = {
     seenNotification: async (_, { input: { notification_ids = [] } }, ctx) => {
       const payload = ctx.user;
 
-      logger.debug(notification_ids, "notifciation idssss")
+      logger.debug(notification_ids, "notifciation idssss", payload);
       try {
         if (notification_ids.length === 0) {
           return {
@@ -104,7 +104,6 @@ export const notificationResolver = {
         }
 
         const result = await prisma.$transaction(async (tx) => {
-
           // 1. Sirf current user ki notifications nikalo
           // const notifications = await tx.notification.findMany({
           //   where: {
@@ -123,10 +122,7 @@ export const notificationResolver = {
 
           select * from notification WHERE notification_id = ANY(${notification_ids}::int[]) and reciever_id = ${payload.userId} 
 
-          `
-
-
-
+          `;
 
           const validIds = notifications.map((n) => n.notification_id);
 
@@ -154,9 +150,7 @@ export const notificationResolver = {
           
           select * from notification_seen where notification_id = ANY(${validIds}::int[])
 
-          `
-
-
+          `;
 
           const alreadySeenIds = alreadySeen.map((n) => n.notification_id);
 
@@ -166,16 +160,8 @@ export const notificationResolver = {
           );
 
           if (newSeenIds.length > 0) {
-            // await tx.notificationSeen.createMany({
-            //   data: newSeenIds.map((id) => ({
-            //     user_id: payload.id,
-            //     notification_id: id,
-            //   })),
-            //   skipDuplicates: true,
-            // });
-
             const values = Prisma.join(
-              newSeenIds.map((id) => Prisma.sql`(${payload.id}, ${id})`)
+              newSeenIds.map((id) => Prisma.sql`(${payload.userId}, ${id})`),
             );
 
             await tx.$queryRaw`
@@ -183,17 +169,6 @@ export const notificationResolver = {
   VALUES ${values}
   ON CONFLICT (user_id, notification_id) DO NOTHING;
 `;
-
-            // await tx.notification.updateMany({
-            //   where: {
-            //     notification_id: {
-            //       in: newSeenIds,
-            //     },
-            //   },
-            //   data: {
-            //     is_seen: true,
-            //   },
-            // });
 
             await tx.$queryRaw`
   UPDATE notification
@@ -216,7 +191,7 @@ export const notificationResolver = {
           ...result,
         };
       } catch (error) {
-        logger.error(error.message, "error message===")
+        logger.error(error.message, "error message===");
         return {
           success: false,
           status: 500,

@@ -223,7 +223,7 @@ export const sendUsers = async (socket, payload) => {
 
   const members = getSocketmembers(payload.userId);
   socket.to(members).emit(ONLINE_USERS, Array.from(onlineUsers));
-  logger.debug(members, "memberssss");
+  // logger.debug(members, "memberssss");
 };
 
 export const createNotification = async (
@@ -242,8 +242,8 @@ export const createNotification = async (
 
       insert into notification (reciever_id,sender_id ,notification_type,metadata,reference_id) values(
         ${reciever_id},${payload.userId},${type},   ${JSON.stringify({
-          message: `${message}`,
-        })}::jsonb , ${reference_id}
+      message: `${message}`,
+    })}::jsonb , ${reference_id}
 
       
       

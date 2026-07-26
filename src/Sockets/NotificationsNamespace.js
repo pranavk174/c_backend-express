@@ -1,17 +1,8 @@
 import { seenNotification } from "../controller/Socket/notification.controller.js";
-import {
-  replyStory,
-  seenStory,
-  likeStory,
-} from "../controller/Socket/story.controller.js";
 import { io } from "../index.js";
-import { logger } from "@/utils/logger.js";
-import {
-  STORY_REPLY,
-  STORY_SEEN,
-  STORY_LIKE,
-  SEEN_NOTIFICATION,
-} from "../utils/events.js";
+
+import { SEEN_NOTIFICATION } from "../utils/events.js";
+import { logger } from "../utils/logger.js";
 import {
   chatSocketIds,
   onlineUsers,
@@ -19,37 +10,20 @@ import {
   storySocketIds,
 } from "../utils/socket.helper.js";
 
-export const storySockets = (socket) => {
-  logger.debug("User connected:", socket.user, socket.id);
+export const NotificationSocket = (socket) => {
+  // logger.debug("User connected:", socket.user, socket.id);
   const payload = socket.user;
   storySocketIds.set(payload.userId.toString(), socket.id);
   onlineUsers.add(payload.userId.toString());
 
   sendUsers(io, payload);
 
-  logger.debug(chatSocketIds, "use socet idssss");
+  logger.debug(chatSocketIds, "use socet idssss i notification name sapce");
   // User ka socketId map mein store karo
   // Example event
-  socket.on("message", (data) => {
-    logger.debug("Message received:", data);
-
-    // sab clients ko emit
-    io.emit("message", data);
-  });
-
-  socket.on(STORY_REPLY, (data, callback) => {
-    replyStory(socket, payload, data, callback);
-  });
-
-  socket.on(STORY_SEEN, (data, callback) => {
-    seenStory(socket, payload, data, callback);
-  });
-
-  socket.on(STORY_LIKE, (data, callback) => {
-    likeStory(socket, payload, data, callback);
-  });
 
   socket.on(SEEN_NOTIFICATION, (data, callback) => {
+    logger.debug("data in notification", data);
     seenNotification(socket, payload, data, callback);
   });
 

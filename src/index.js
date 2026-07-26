@@ -14,6 +14,7 @@ import { chatSockets } from "./Sockets/chatNameSpaces.js";
 import { allowedOrigins } from "./lib/helpers.js";
 import { socketServer } from "./Sockets/Socketserver.js";
 import { notificationSocketIds } from "./utils/socket.helper.js";
+import { NotificationSocket } from "./Sockets/NotificationsNamespace.js";
 // import { authMiddleware } from "./middlewares/auth.js";
 const app = express();
 // const server = http.createServer(app);
@@ -52,12 +53,7 @@ notificationNamespace.use(socketAuthMiddleware);
 
 chatNamespace.on("connection", chatSockets);
 
-notificationNamespace.on("connection", (socket) => {
-  const payload = socket.user;
-  notificationSocketIds.set(payload.userId.toString(), socket.id);
-  socket.join(`user:${socket.user._id}`);
-  logger.debug("notification connected", socket.id);
-});
+notificationNamespace.on("connection", NotificationSocket);
 
 app.use("/api/v1", router);
 app.use("/graphql", yoga);

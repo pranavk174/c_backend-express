@@ -1,33 +1,85 @@
 import prisma from "../../../prisma/prisma-client.js";
 import { Prisma } from "@prisma/client";
 import { logger } from "../../utils/logger.js";
+import { SEEN_NOTIFICATION } from "../../utils/events.js";
 
 export const seenNotification = async (socket, payload, data, callback) => {
   try {
-    logger.debug(data, "data in notification seen event");
+    const { notification_ids } = data;
 
-    const values = data.map((no) => Prisma.sql`(${no}, ${payload.userId})`);
-
-    const seenData = await prisma.$queryRaw`
-    
-    
-    insert into notification_seen (notification_id,user_id)  VALUES ${Prisma.join(values)}
-    `;
-
-    if (!seenData) {
-      throw new Error("Error in Seeen Notifiation");
+    if (notification_ids.length === 0) {
+      return callback({
+        success: false,
+        status: 400,
+        message: "Notification ids are required",
+      });
     }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const notifications = await tx.$queryRaw`
+          
+
+          select * from notification WHERE notification_id = ANY(${notification_ids}::int[]) and reciever_id = ${payload.userId} 
+
+          `;
+
+      const validIds = notifications.map((n) => n.notification_id);
+
+      if (validIds.length === 0) {
+        return {
+          updated: 0,
+          ignored: notification_ids.length,
+        };
+      }
+      const alreadySeen = await tx.$queryRaw`
+          select * from notification_seen where notification_id = ANY(${validIds}::int[])
+          `;
+
+      const alreadySeenIds = alreadySeen.map((n) => n.notification_id);
+
+      // 3. Sirf new notifications insert karo
+      const newSeenIds = validIds.filter((id) => !alreadySeenIds.includes(id));
+
+      if (newSeenIds.length > 0) {
+        const values = Prisma.join(
+          newSeenIds.map((id) => Prisma.sql`(${payload.userId}, ${id})`),
+        );
+
+        await tx.$queryRaw`
+  INSERT INTO notification_seen (user_id, notification_id)
+  VALUES ${values}
+  ON CONFLICT (user_id, notification_id) DO NOTHING;
+`;
+
+        await tx.$queryRaw`
+  UPDATE notification
+  SET is_seen = true
+  WHERE notification_id = ANY(${newSeenIds}::int[])
+`;
+      }
+
+      return {
+        updated: newSeenIds.length,
+        ignored: notification_ids.length - validIds.length,
+        alreadySeen: alreadySeenIds.length,
+      };
+    });
+
+    socket.emit(SEEN_NOTIFICATION, result);
+
     return callback({
-      message: "Seen Successfully",
-      status: 201,
       success: true,
+      status: 200,
+      message: "Notifications processed successfully.",
+      ...result,
     });
   } catch (error) {
-    logger.debug(error, "error in seen notifctaion..");
+    logger.error(error.message, "error message===");
     return callback({
-      message: error.message,
-      status: 500,
       success: false,
+      status: 500,
+      message: "Something went wrong",
+      error: error.message,
     });
   }
 };
