@@ -88,9 +88,6 @@ const userResolvers = {
         
         `;
 
-        if (!users) {
-          throw new Error();
-        }
         return {
           message: "Successfully retrieved Users",
           status: 200,
@@ -104,12 +101,8 @@ const userResolvers = {
         // logger.debug(users, "users dataaaaaa.");
       } catch (error) {
         logger.debug(error, "in get userssssssss");
-        return {
-          message: "Something went Wrong",
-          status: 500,
-          success: false,
-          error: error.message,
-        };
+        errorHandler(error.message, "INTERNAL_SERVER_ERROR", 500)
+
       }
     },
   },
@@ -127,6 +120,8 @@ const userResolvers = {
         const exists = await prisma.users.findFirst({
           where: { email },
         });
+
+
 
         const otp = Math.floor(100000 + Math.random() * 900000);
         const expires_at = new Date(Date.now() + 5 * 60 * 1000);
@@ -203,12 +198,7 @@ const userResolvers = {
         };
       } catch (error) {
         logger.debug(error);
-        return {
-          message: "Something Went wrong",
-          status: 500,
-          success: false,
-          error: error.message,
-        };
+        return errorHandler(error.message, "INTERNAL_SERVER_ERROR", 500)
       }
     },
     verifyOtp: async (
@@ -224,17 +214,13 @@ const userResolvers = {
         !location ||
         !device_name
       ) {
-        throw new Error("Data is missing");
+        return {
+          message: "data field is missing",
+          status: 400,
+          success: false
+        }
       }
-      logger.debug(
-        email,
-        otp,
-        device_id,
-        ip_address,
-        location,
-        device_name,
-        "device meta data...",
-      );
+
       try {
         const user = await prisma.users.findFirst({
           where: { email },
@@ -260,13 +246,13 @@ const userResolvers = {
           }
           const isMatch = await bcrypt.compare(String(otp), record.otp);
           if (!isMatch) {
-            // return { message: "Invalid OTP", status: 400, success: false };
-            throw new Error("Invalid Otp");
+            return { message: "Invalid OTP", status: 400, success: false };
+            // throw new Error("Invalid Otp");
           }
 
           const isExpired = new Date(record.expires_at) < new Date();
           if (isExpired) {
-            throw new Error("Expired Otp");
+            return { message: "Expired OTP", status: 400, success: false };
           }
 
           // logger.debug(
@@ -364,19 +350,20 @@ const userResolvers = {
           where: { email },
         });
 
+
+
         if (!record) {
-          // return { message: "Invalid OTP", status: 400, success: false };
-          throw new Error("Registration Failed");
+          return { message: "OTP not found", status: 400, success: false };
+        }
+        const isMatch = await bcrypt.compare(String(otp), record.otp);
+        if (!isMatch) {
+          return { message: "Invalid OTP", status: 400, success: false };
+          // throw new Error("Invalid Otp");
         }
 
         const isExpired = new Date(record.expires_at) < new Date();
         if (isExpired) {
-          throw new Error("OTP Expired");
-        }
-
-        const isMatch = await bcrypt.compare(String(otp), record.otp);
-        if (!isMatch) {
-          throw new Error("Invalid Otp");
+          return { message: "Expired OTP", status: 400, success: false };
         }
 
         // create user
@@ -391,7 +378,7 @@ const userResolvers = {
           },
         });
 
-        logger.debug(is_verified, "is verifieddd");
+
 
         return {
           message: "OTP Verified Successfully",
@@ -408,8 +395,8 @@ const userResolvers = {
 
         errorHandler(
           error.message || "Something went wrong",
-          "BAD_REQUEST",
-          400,
+          "INTERNAL_SERVER_ERROR",
+          500,
         );
 
         // return {
@@ -485,7 +472,7 @@ const userResolvers = {
           // generated OTP
 
           const hashedOtp = await bcrypt.hash(otp.toString(), SALT_ROUNDS);
-          const updated = await prisma.register.update({
+          await prisma.register.update({
             where: {
               email,
             },
@@ -495,12 +482,9 @@ const userResolvers = {
             },
           });
 
-          if (!updated) {
-            throw new Error();
-          }
           return {
             message:
-              "User is not verified , Please Verify Otp Send Successfully",
+              "User is not verified , Please Verify Otp Sent Successfully",
             status: 402,
             success: false,
           };
@@ -525,9 +509,6 @@ const userResolvers = {
           }),
         ]);
 
-        if (!created || !deleted) {
-          throw new Error();
-        }
 
         return {
           message: "User Successfully created",
@@ -553,20 +534,21 @@ const userResolvers = {
       }
 
       if (Object.keys(updateData).length === 0) {
-        return errorHandler("Input field is missing", "BAD_REQUEST", 400);
+        return {
+          message: "Input field is missing", status: 400, success: false
+        }
+
       }
 
       try {
         const payload = context.user;
-        const updated = await prisma.users.update({
+        await prisma.users.update({
           where: {
             id: payload.userId,
           },
           data: updateData,
         });
-        if (!updated) {
-          throw new Error();
-        }
+
 
         return {
           message: "User Updated Successfully",
@@ -574,7 +556,7 @@ const userResolvers = {
           success: true,
         };
       } catch (error) {
-        errorHandler(
+        return errorHandler(
           error.message || "Something went wrong",
           "BAD_REQUEST",
           500,
@@ -585,16 +567,14 @@ const userResolvers = {
       const payload = ctx.user;
 
       try {
-        const updated = await prisma.$queryRaw`
+        await prisma.$queryRaw`
   
   update  users set theme = ${theme} where id = ${payload.userId} returning *
   
   
   `;
 
-        if (!updated) {
-          throw new Error("Theme Update Failed");
-        }
+
 
         await ctx.res.cookie("theme", updated[0].theme, {
           httpOnly: false,
@@ -609,12 +589,11 @@ const userResolvers = {
           success: true,
         };
       } catch (error) {
-        return {
-          message: "Something went wrong",
-          status: 400,
-          success: false,
-          error: error.message,
-        };
+        return errorHandler(
+          error.message || "Something went wrong",
+          "INTERNAL_SERVER_ERROR",
+          500,
+        );
       }
     },
     deleteUser: async (_, { action_type }, context) => {
@@ -628,7 +607,11 @@ const userResolvers = {
         });
 
         if (!exists) {
-          throw new Error("User not found");
+          return {
+            message: "User not found",
+            status: 404, success: false
+          }
+
         }
 
         const enums = ["delete", "suspend"];
@@ -644,7 +627,12 @@ const userResolvers = {
         }
 
         if (!enums.includes(action_type.toLowerCase())) {
-          throw new Error("Invalid action type");
+          return {
+            message: `Invalid action type`,
+            status: 400,
+            success: false,
+          };
+
         }
 
         const [deleted, loggedout] = await Promise.all([
@@ -677,9 +665,7 @@ const userResolvers = {
           }),
         ]);
 
-        if (!deleted || !loggedout) {
-          throw new Error();
-        }
+
 
         context.res.clearCookie("accessToken", { path: "/" });
         context.res.clearCookie("refreshToken", { path: "/" });
@@ -688,14 +674,12 @@ const userResolvers = {
           status: 200,
           success: true,
         };
-      } catch (err) {
-        logger.debug(err.message, "errror");
-        return {
-          message: "Something Went Wrong",
-          status: 500,
-          success: false,
-          error: err.message,
-        };
+      } catch (error) {
+        return errorHandler(
+          error.message || "Something went wrong",
+          "INTERNAL_SERVER_ERROR",
+          500,
+        );
       }
     },
     generateRefreshToken: async (_, __, context) => {
@@ -721,7 +705,14 @@ const userResolvers = {
           },
         });
 
-        if (!device) throw new Error("Token revoked");
+
+
+        if (!device) {
+          return {
+            message: 'Token is Invalid or Revoked', status: 400,
+            success: false
+          }
+        }
 
         const { accessToken: newAccessToken } = generateTokens(
           payload.userId,
@@ -745,15 +736,11 @@ const userResolvers = {
           status: 200,
         };
       } catch (error) {
-        logger.debug(error, "error in  generated token...");
-        context.res.clearCookie("accessToken", { path: "/" });
-        context.res.clearCookie("refreshToken", { path: "/" });
-        return {
-          message: "Failed to refresh token",
-          success: false,
-          error: error.message,
-          status: 401,
-        };
+        return errorHandler(
+          error.message || "Something went wrong",
+          "INTERNAL_SERVER_ERROR",
+          500,
+        );
       }
     },
     logout: async (_, __, context) => {
@@ -774,24 +761,22 @@ const userResolvers = {
           },
         });
 
-        if (loggedout) {
-          context.res.clearCookie("accessToken", { path: "/" });
-          context.res.clearCookie("refreshToken", { path: "/" });
-          context.res.clearCookie("theme", { path: "/" });
-          return {
-            message: "Logout successful",
-            success: true,
-            status: 200,
-          };
-        }
-      } catch (error) {
-        logger.debug(error);
+
+        context.res.clearCookie("accessToken", { path: "/" });
+        context.res.clearCookie("refreshToken", { path: "/" });
+        context.res.clearCookie("theme", { path: "/" });
         return {
-          message: "Failed to logout",
-          success: false,
-          error: error.message,
-          status: 401,
+          message: "Logout successful",
+          success: true,
+          status: 200,
         };
+
+      } catch (error) {
+        return errorHandler(
+          error.message || "Something went wrong",
+          "INTERNAL_SERVER_ERROR",
+          500,
+        );
       }
     },
     blockUser: async (_, { input: { blocked_user_id, reason } }, context) => {
@@ -812,7 +797,12 @@ const userResolvers = {
         });
 
         if (!exists) {
-          throw new Error("User not found");
+          return {
+            message: "User not found",
+            status: 404,
+            success: false,
+          };
+
         }
 
         const existing = await prisma.block.findFirst({
@@ -831,7 +821,7 @@ const userResolvers = {
           };
         }
 
-        const blocked = await prisma.block.create({
+        await prisma.block.create({
           data: {
             user_id: payload.userId,
             blocked_user_id,
@@ -841,23 +831,19 @@ const userResolvers = {
           },
         });
 
-        if (!blocked) {
-          throw new Error("Failed to block user");
-        }
+
 
         return {
           message: "User Blocked Successfully",
           status: 200,
           success: true,
         };
-      } catch (err) {
-        // console.error(err);
-        return {
-          message: "Failed to block user",
-          status: 500,
-          success: false,
-          error: err.message,
-        };
+      } catch (error) {
+        return errorHandler(
+          error.message || "Something went wrong",
+          "INTERNAL_SERVER_ERROR",
+          500,
+        );
       }
     },
     unBlockUser: async (_, { input: { blocked_user_id } }, context) => {
@@ -878,10 +864,14 @@ const userResolvers = {
         });
 
         if (!exists) {
-          throw new Error("User not found");
+          return {
+            message: "User not found",
+            status: 404,
+            success: false,
+          };
         }
 
-        const updated = await prisma.block.updateMany({
+        await prisma.block.updateMany({
           where: {
             user_id: payload.userId,
             blocked_user_id,
@@ -894,23 +884,19 @@ const userResolvers = {
           },
         });
 
-        if (!updated) {
-          throw new Error("Failed to unblock user");
-        }
+
 
         return {
           message: "User Unblocked Successfully",
           status: 200,
           success: true,
         };
-      } catch (err) {
-        // console.error(err);
-        return {
-          message: "Failed to unblock user",
-          status: 500,
-          success: false,
-          error: err.message,
-        };
+      } catch (error) {
+        return errorHandler(
+          error.message || "Something went wrong",
+          "INTERNAL_SERVER_ERROR",
+          500,
+        );
       }
     },
   },

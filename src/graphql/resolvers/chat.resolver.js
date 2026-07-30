@@ -9,7 +9,8 @@ import {
   chekUserExists,
 } from "../../lib/helpers.js";
 import { logger } from "../../utils/logger.js";
-import { chatSocketIds, onlineUsers } from "../../utils/socket.helper.js";
+import { onlineUsers } from "../../utils/socket.helper.js";
+import { errorHandler } from "../../lib/tokenvalidator.js";
 const chatResolver = {
   ChatResponse: {
     __resolveType(obj) {
@@ -873,7 +874,12 @@ ORDER BY m.created_at DESC NULLS LAST;
   Mutation: {
     createNewChat: async (_, { member_id }, ctx) => {
       if (!member_id) {
-        throw new Error("Member id is Missing");
+        return {
+          message: "Member id is Missing",
+          status: 400,
+          success: false
+        }
+
       }
       try {
         const payload = ctx.user;
@@ -890,15 +896,13 @@ ORDER BY m.created_at DESC NULLS LAST;
           
           
           `;
-          if (!newChat) {
-            throw new Error();
-          }
+
 
           chat_id = newChat[0].id;
 
           // const values = Prisma.sql`(${newChat[0].id}, ${payload.userId}),(${newChat[0].id}, ${member_id})`;
 
-          const members = await prisma.$queryRaw`
+          await prisma.$queryRaw`
           
           
           insert into chat_member (chat_id , member_id)
@@ -919,11 +923,11 @@ ORDER BY m.created_at DESC NULLS LAST;
           },
         };
       } catch (error) {
-        return {
-          message: error.message,
-          status: 500,
-          success: false,
-        };
+        return errorHandler(
+          error.message || "Something went wrong",
+          "INTERNAL_SERVER_ERROR",
+          500,
+        );
       }
     },
     createNewGroup: async (
@@ -941,14 +945,14 @@ ORDER BY m.created_at DESC NULLS LAST;
         //   };
         // }
 
-        const result = await prisma.$transaction(async (tx) => {
+        await prisma.$transaction(async (tx) => {
           const created = await tx.$queryRaw`
       
       insert into chat (chat_type) values('group') returning id ;
       
       `;
 
-          if (!created) throw new Error("Error in creanting Chat id");
+
 
           await tx.$queryRaw`
       insert into groups (name , chat_id ,profile_pic,created_by_id) values (${groupName},${created[0].id},${profile_pic},${payload.userId});
@@ -969,23 +973,19 @@ ORDER BY m.created_at DESC NULLS LAST;
           return created[0];
         });
 
-        if (result) {
-          return {
-            message: "Successfully created Group",
-            status: 201,
-            success: true,
-          };
-        } else {
-          throw new Error();
-        }
-      } catch (error) {
-        logger.debug(error);
+
         return {
-          message: "Error in group Creation",
-          status: 500,
-          success: false,
-          error: error.message,
+          message: "Successfully created Group",
+          status: 201,
+          success: true,
         };
+
+      } catch (error) {
+        return errorHandler(
+          error.message || "Something went wrong",
+          "INTERNAL_SERVER_ERROR",
+          500,
+        );
       }
     },
     sendMessage: async (
