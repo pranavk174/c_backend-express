@@ -3,7 +3,7 @@ import { yoga } from "./graphql/endpoints.js";
 // import { Server } from "socket.io";
 import express from "express";
 import { logger } from "./utils/logger.js";
-import router from "./routes/route.js";
+
 import cookieParser from "cookie-parser";
 import cors from "cors";
 
@@ -55,7 +55,7 @@ chatNamespace.on("connection", chatSockets);
 
 notificationNamespace.on("connection", NotificationSocket);
 
-app.use("/api/v1", router);
+
 app.use("/graphql", yoga);
 server.listen(process.env.PORT, () => {
   logger.debug("Server + Socket.IO started on port:", process.env.PORT);

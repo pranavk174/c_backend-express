@@ -11,6 +11,7 @@ import {
 import { logger } from "../../utils/logger.js";
 import { onlineUsers } from "../../utils/socket.helper.js";
 import { errorHandler } from "../../lib/tokenvalidator.js";
+import { asyncGraphqlAPIHandeler } from "../../lib/util.js";
 const chatResolver = {
   ChatResponse: {
     __resolveType(obj) {
@@ -872,16 +873,16 @@ ORDER BY m.created_at DESC NULLS LAST;
     },
   },
   Mutation: {
-    createNewChat: async (_, { member_id }, ctx) => {
-      if (!member_id) {
-        return {
-          message: "Member id is Missing",
-          status: 400,
-          success: false
+    createNewChat:
+      asyncGraphqlAPIHandeler(async (_, { member_id }, ctx) => {
+        if (!member_id) {
+          return {
+            message: "Member id is Missing",
+            status: 400,
+            success: false,
+          };
         }
 
-      }
-      try {
         const payload = ctx.user;
 
         let chat_id = null;
@@ -896,7 +897,6 @@ ORDER BY m.created_at DESC NULLS LAST;
           
           
           `;
-
 
           chat_id = newChat[0].id;
 
@@ -922,21 +922,16 @@ ORDER BY m.created_at DESC NULLS LAST;
             chat_id,
           },
         };
-      } catch (error) {
-        return errorHandler(
-          error.message || "Something went wrong",
-          "INTERNAL_SERVER_ERROR",
-          500,
-        );
-      }
-    },
-    createNewGroup: async (
-      _,
-      { input: { member_ids, groupName, profile_pic = null } },
-      ctx,
-    ) => {
-      const payload = ctx.user;
-      try {
+
+      }),
+    createNewGroup:
+      asyncGraphqlAPIHandeler(async (
+        _,
+        { input: { member_ids, groupName, profile_pic = null } },
+        ctx,
+      ) => {
+        const payload = ctx.user;
+
         // if (member_ids.length <= 1) {
         //   return {
         //     message: "Group Can not have only One member",
@@ -951,8 +946,6 @@ ORDER BY m.created_at DESC NULLS LAST;
       insert into chat (chat_type) values('group') returning id ;
       
       `;
-
-
 
           await tx.$queryRaw`
       insert into groups (name , chat_id ,profile_pic,created_by_id) values (${groupName},${created[0].id},${profile_pic},${payload.userId});
@@ -973,161 +966,155 @@ ORDER BY m.created_at DESC NULLS LAST;
           return created[0];
         });
 
-
         return {
           message: "Successfully created Group",
           status: 201,
           success: true,
         };
 
-      } catch (error) {
-        return errorHandler(
-          error.message || "Something went wrong",
-          "INTERNAL_SERVER_ERROR",
-          500,
-        );
-      }
-    },
-    sendMessage: async (
-      _,
-      { input: { chat_ids, reciever_ids, content = null, media = [] } },
-      ctx,
-    ) => {
-      const payload = ctx.user;
+      }),
+    sendMessage:
+      asyncGraphqlAPIHandeler(async (
+        _,
+        { input: { chat_ids, reciever_ids, content = null, media = [] } },
+        ctx,
+      ) => {
+        const payload = ctx.user;
 
-      if (
-        (!content && !media) ||
-        (chat_ids &&
-          chat_ids.length < 1 &&
-          reciever_ids &&
-          reciever_ids.length < 1)
-      ) {
-        return {
-          message: "Data is missing...",
-          status: 400,
-          success: false,
-        };
-      }
+        if (
+          (!content && !media) ||
+          (chat_ids &&
+            chat_ids.length < 1 &&
+            reciever_ids &&
+            reciever_ids.length < 1)
+        ) {
+          return {
+            message: "Data is missing...",
+            status: 400,
+            success: false,
+          };
+        }
 
-      // if(reciever_ids && reciever_ids.incldes(payload.userID))
+        // if(reciever_ids && reciever_ids.incldes(payload.userID))
 
-      let chatId = null;
-      let chat_id = null;
-      if (chat_ids && chat_ids.length > 0) {
-        chatId = chat_ids[0];
-        chat_id = chat_ids[0];
-      }
+        let chatId = null;
+        let chat_id = null;
+        if (chat_ids && chat_ids.length > 0) {
+          chatId = chat_ids[0];
+          chat_id = chat_ids[0];
+        }
 
-      try {
-        if (!chat_id) {
-          const reciever_id = parseInt(reciever_ids[0]);
-          const reciever = await chekUserExists(prisma, reciever_ids);
+        try {
+          if (!chat_id) {
+            const reciever_id = parseInt(reciever_ids[0]);
+            const reciever = await chekUserExists(prisma, reciever_ids);
 
-          // logger.debug(typeof reciever_id, "type dataaa...");
-          if (!reciever.length > 0) {
-            throw new Error("Reciever Does not exists");
-          }
-          // const memeberExists = await checkMemeberExists(prisma, reciever_ids);
+            // logger.debug(typeof reciever_id, "type dataaa...");
+            if (!reciever.length > 0) {
+              throw new Error("Reciever Does not exists");
+            }
+            // const memeberExists = await checkMemeberExists(prisma, reciever_ids);
 
-          const chatExists = await checkChatExists(
-            prisma,
-            payload.userId,
-            reciever_ids,
-          );
+            const chatExists = await checkChatExists(
+              prisma,
+              payload.userId,
+              reciever_ids,
+            );
 
-          if (chatExists.length < 1) {
-            const data = await prisma.$queryRaw`
+            if (chatExists.length < 1) {
+              const data = await prisma.$queryRaw`
           
           insert into chat (chat_type) values('private')  RETURNING id;
 
 
           `;
 
-            if (!data || data.length < 1) {
-              throw new Error();
-            }
-            chatId = data[0].id;
+              if (!data || data.length < 1) {
+                throw new Error();
+              }
+              chatId = data[0].id;
 
-            const chatmember = await prisma.$queryRaw`
+              const chatmember = await prisma.$queryRaw`
           
           insert into chat_member (member_id ,chat_id ) values(${payload.userId},${chatId}),(${reciever_id},${chatId})
           
           `;
-            if (!chatmember) {
-              throw new Error();
+              if (!chatmember) {
+                throw new Error();
+              }
             }
-          }
-          logger.debug(chatExists, "chartexistssssss");
+            logger.debug(chatExists, "chartexistssssss");
 
-          chatId = chatExists[0].chat_id;
-        }
-        const addMessage = await prisma.$queryRaw`
+            chatId = chatExists[0].chat_id;
+          }
+          const addMessage = await prisma.$queryRaw`
           
           insert into message (content,sender_id ,created_at ,chat_id )  values(${content},${payload.userId},${new Date()},${chat_id ?? chatId}) returning *
           
           `;
 
-        if (media && media.length > 0) {
-          const [addMedia] = await Promise.all(
-            media.map((m) => {
-              return prisma.$queryRaw`
+          if (media && media.length > 0) {
+            const [addMedia] = await Promise.all(
+              media.map((m) => {
+                return prisma.$queryRaw`
 
           insert into attachment (message_id,url,file_type,file_name,file_size) values(${addMessage[0].id},${m.url},${m.file_type.toLowerCase()},${m.file_name},${m.file_size})
 
           `;
-            }),
-          );
+              }),
+            );
 
-          if (!addMedia) {
+            if (!addMedia) {
+              throw new Error();
+            }
+          }
+
+          // logger.debug(chatId, "chatiddddd");
+
+          if (!addMessage) {
             throw new Error();
           }
+
+          logger.debug(addMessage, "addmessage dataaa");
+
+          await pubsub.publish(`CHAT_${chat_id}`, addMessage[0]);
+
+          return {
+            message: "Message sent successfully",
+            status: 201,
+            success: true,
+          };
+
+          // const chatData = await
+        } catch (error) {
+          logger.debug(error);
+          return {
+            message: "Something went wrong",
+            status: 500,
+            success: false,
+            error: error.message,
+          };
+        }
+      }),
+    editMessage:
+      asyncGraphqlAPIHandeler(async (
+        _,
+        { input: { message_ids, chat_ids, content } },
+        ctx,
+      ) => {
+        const payload = ctx.user;
+
+        // logger.debug(message_ids, "ctx dataaaaaaaa");
+        if (message_ids.length < 1 || !content) {
+          return {
+            message: "Data is missing",
+            success: false,
+            status: 400,
+          };
         }
 
-        // logger.debug(chatId, "chatiddddd");
+        const message_id = message_ids[0];
 
-        if (!addMessage) {
-          throw new Error();
-        }
-
-        logger.debug(addMessage, "addmessage dataaa");
-
-        await pubsub.publish(`CHAT_${chat_id}`, addMessage[0]);
-
-        return {
-          message: "Message sent successfully",
-          status: 201,
-          success: true,
-        };
-
-        // const chatData = await
-      } catch (error) {
-        logger.debug(error);
-        return {
-          message: "Something went wrong",
-          status: 500,
-          success: false,
-          error: error.message,
-        };
-      }
-    },
-    editMessage: async (
-      _,
-      { input: { message_ids, chat_ids, content } },
-      ctx,
-    ) => {
-      const payload = ctx.user;
-
-      // logger.debug(message_ids, "ctx dataaaaaaaa");
-      if (message_ids.length < 1 || !content) {
-        return {
-          message: "Data is missing",
-          success: false,
-          status: 400,
-        };
-      }
-
-      const message_id = message_ids[0];
-      try {
         const messageData = await prisma.$queryRaw`
         
         select id,content,sender_id from message where id = ${message_id} and is_deleted = false limit 1
@@ -1170,16 +1157,9 @@ WHERE id = ${message_id}
           status: 201,
           success: true,
         };
-      } catch (err) {
-        return {
-          message: "Something went Wrong",
-          status: 500,
-          success: false,
-          error: err.message,
-        };
-      }
-    },
-    deleteMessage: async (_, { input: { message_ids, delete_type } }, ctx) => {
+
+      }),
+    deleteMessage: asyncGraphqlAPIHandeler(async (_, { input: { message_ids, delete_type } }, ctx) => {
       const payload = ctx.user;
 
       if (!message_ids.length > 0 || !delete_type) {
@@ -1190,45 +1170,45 @@ WHERE id = ${message_id}
         };
       }
 
-      try {
-        const messageData = await checkMessageExists(prisma, message_ids);
-        // const memeberdata = await checkMemeberExists(
-        //   prisma,
-        //   messageData[0].chat_id,
-        //   payload.userId,
-        // );
-        // if (messageData.length < 1) {
-        //   throw new Error(
-        //     "This Message doest not Exists or  is Already deleted",
-        //   );
-        // }
 
-        logger.debug(messageData, "message dataaaa..._..");
+      const messageData = await checkMessageExists(prisma, message_ids);
+      // const memeberdata = await checkMemeberExists(
+      //   prisma,
+      //   messageData[0].chat_id,
+      //   payload.userId,
+      // );
+      // if (messageData.length < 1) {
+      //   throw new Error(
+      //     "This Message doest not Exists or  is Already deleted",
+      //   );
+      // }
 
-        if (delete_type === "onlyme") {
-          const values = message_ids
-            .map((id) => `(${id}, ${payload.userId})`)
-            .join(",");
+      logger.debug(messageData, "message dataaaa..._..");
 
-          const updated = await prisma.$executeRawUnsafe(`
+      if (delete_type === "onlyme") {
+        const values = message_ids
+          .map((id) => `(${id}, ${payload.userId})`)
+          .join(",");
+
+        const updated = await prisma.$executeRawUnsafe(`
           INSERT INTO message_delete_for_me
           (message_id, user_id)
           VALUES ${values}
         `);
 
-          if (!updated) {
-            throw new Error("Message Deletion Failed");
+        if (!updated) {
+          throw new Error("Message Deletion Failed");
+        }
+      } else if (delete_type === "everyone") {
+        const verify = messageData.map((m) => {
+          if (m.sender_id != payload.userId) {
+            throw new Error(
+              "You can only delete  the messages which you have sent!",
+            );
           }
-        } else if (delete_type === "everyone") {
-          const verify = messageData.map((m) => {
-            if (m.sender_id != payload.userId) {
-              throw new Error(
-                "You can only delete  the messages which you have sent!",
-              );
-            }
-          });
+        });
 
-          const deleted = await prisma.$queryRaw`
+        const deleted = await prisma.$queryRaw`
         
 
         update message set is_deleted = true 
@@ -1236,45 +1216,39 @@ WHERE id = ${message_id}
 
         `;
 
-          logger.debug(deleted, "deleetddddd");
+        logger.debug(deleted, "deleetddddd");
 
-          if (!deleted) {
-            throw new Error("Message not deleted..");
-          }
-        } else {
-          throw new Error("Delete type is Invalid");
+        if (!deleted) {
+          throw new Error("Message not deleted..");
         }
-        return {
-          message: "Message Deleted successfully",
-          status: 201,
-          success: true,
-        };
-      } catch (error) {
-        logger.debug(error, "errorrrr");
-        return {
-          message: "Something went Wrong",
-          status: 500,
-          success: false,
-          error: error.message,
-        };
+      } else {
+        throw new Error("Delete type is Invalid");
       }
-    },
-    replyMessage: async (
-      _,
-      { input: { message_ids, chat_ids, content, media } },
-      ctx,
-    ) => {
-      const payload = ctx.user;
+      return {
+        message: "Message Deleted successfully",
+        status: 201,
+        success: true,
+      };
 
-      if (message_ids.length !== 1 || (!content && !media)) {
-        return {
-          message: "Data is Missing",
-          status: 400,
-          success: false,
-        };
-      }
+    })
+    ,
+    replyMessage:
+      asyncGraphqlAPIHandeler(async (
+        _,
+        { input: { message_ids, chat_ids, content, media } },
+        ctx,
+      ) => {
+        const payload = ctx.user;
 
-      try {
+        if (message_ids.length !== 1 || (!content && !media)) {
+          return {
+            message: "Data is Missing",
+            status: 400,
+            success: false,
+          };
+        }
+
+
         const messageData = await checkMessageExists(prisma, message_ids);
 
         // const memeberdata = await checkMemeberExists(
@@ -1302,16 +1276,9 @@ WHERE id = ${message_id}
           status: 201,
           success: true,
         };
-      } catch (error) {
-        return {
-          message: "Something went Wrong",
-          status: 500,
-          success: false,
-          error: error.message,
-        };
-      }
-    },
-    reactMessage: async (
+
+      }),
+    reactMessage: asyncGraphqlAPIHandeler(async (
       _,
       { input: { message_ids, chat_ids, reaction_id } },
       ctx,
@@ -1328,23 +1295,23 @@ WHERE id = ${message_id}
 
       const message_id = message_ids[0];
 
-      try {
-        const [messaseData, reactionData] = await Promise.all([
-          checkMessageExists(prisma, message_ids),
-          prisma.$queryRaw`
+
+      const [messaseData, reactionData] = await Promise.all([
+        checkMessageExists(prisma, message_ids),
+        prisma.$queryRaw`
           
           select react_id from reaction where react_id = ${reaction_id}
 
           `,
-        ]);
+      ]);
 
-        if (messaseData.length < 1 || reactionData.length < 1) {
-          throw new Error(
-            "Message or Reaction doesnt exists or has been deleted",
-          );
-        }
+      if (messaseData.length < 1 || reactionData.length < 1) {
+        throw new Error(
+          "Message or Reaction doesnt exists or has been deleted",
+        );
+      }
 
-        const updated = await prisma.$queryRaw`
+      const updated = await prisma.$queryRaw`
         
         INSERT INTO message_reaction (
     message_id,
@@ -1368,44 +1335,39 @@ SET
         
         `;
 
-        if (!updated) {
-          throw new Error("Reaction Failed");
+      if (!updated) {
+        throw new Error("Reaction Failed");
+      }
+
+      return {
+        message: "Successfully Reacted Message",
+        status: 201,
+        success: true,
+      };
+
+    })
+    ,
+    // very complex logic......
+    forwardMessage:
+      asyncGraphqlAPIHandeler(async (
+        _,
+        { input: { message_ids, chat_ids = [], reciever_ids = [] } },
+        ctx,
+      ) => {
+        const payload = ctx.user;
+
+        if (
+          !message_ids?.length ||
+          (!chat_ids?.length && !reciever_ids?.length)
+        ) {
+          return {
+            message: "Data is missing",
+            success: false,
+            status: 400,
+          };
         }
 
-        return {
-          message: "Successfully Reacted Message",
-          status: 201,
-          success: true,
-        };
-      } catch (error) {
-        return {
-          message: "Sonme thing went wrong",
-          status: 500,
-          success: false,
-          error: error.message,
-        };
-      }
-    },
-    // very complex logic......
-    forwardMessage: async (
-      _,
-      { input: { message_ids, chat_ids = [], reciever_ids = [] } },
-      ctx,
-    ) => {
-      const payload = ctx.user;
 
-      if (
-        !message_ids?.length ||
-        (!chat_ids?.length && !reciever_ids?.length)
-      ) {
-        return {
-          message: "Data is missing",
-          success: false,
-          status: 400,
-        };
-      }
-
-      try {
         // =========================
         // validate messages
         // =========================
@@ -1614,16 +1576,9 @@ SET
           status: 201,
           success: true,
         };
-      } catch (error) {
-        return {
-          message: "Something went wrong",
-          status: 500,
-          success: false,
-          error: error.message,
-        };
-      }
-    },
-    seenMessage: async (_, { input: { message_ids, chat_ids } }, ctx) => {
+
+      }),
+    seenMessage: asyncGraphqlAPIHandeler(async (_, { input: { message_ids, chat_ids } }, ctx) => {
       const payload = ctx.user;
 
       if (message_ids.length < 1) {
@@ -1634,35 +1589,27 @@ SET
         };
       }
 
-      try {
-        const messageData = await checkMessageExists(prisma, message_ids);
 
-        const seen = await prisma.seen_message.createMany({
-          data: message_ids.map((m) => ({
-            message_id: parseInt(m),
-            user_id: payload.userId,
-          })),
-        });
+      await checkMessageExists(prisma, message_ids);
 
-        if (!seen) {
-          throw new Error("Error in message seen");
-        }
-        return {
-          message: "Successfully Seen message",
-          status: 201,
-          success: true,
-        };
-      } catch (error) {
-        logger.debug(error, "error ");
-        return {
-          message: "Something went wrong",
-          status: 500,
-          success: false,
-          error: error.message,
-        };
+      const seen = await prisma.seen_message.createMany({
+        data: message_ids.map((m) => ({
+          message_id: parseInt(m),
+          user_id: payload.userId,
+        })),
+      });
+
+      if (!seen) {
+        throw new Error("Error in message seen");
       }
-    },
-    setWallpaper: async (_, { url }, ctx) => {
+      return {
+        message: "Successfully Seen message",
+        status: 201,
+        success: true,
+      };
+
+    }),
+    setWallpaper: asyncGraphqlAPIHandeler(async (_, { url }, ctx) => {
       if (!url || url.length === 0) {
         return GraphQLError({
           message: "Data Missing",
@@ -1671,10 +1618,10 @@ SET
         });
       }
 
-      try {
-        const payload = ctx.user;
 
-        const uploaded = await prisma.$queryRaw`
+      const payload = ctx.user;
+
+      const uploaded = await prisma.$queryRaw`
         
         INSERT INTO wallpapers (url, user_id)
 VALUES (${url}, ${payload.userId})
@@ -1686,23 +1633,17 @@ DO UPDATE SET
         
         `;
 
-        if (!uploaded) {
-          throw new Error("Upload Failed in Wallpaper");
-        }
-
-        return {
-          message: "Successfully Uploaded Wallpaper",
-          success: true,
-          status: 201,
-        };
-      } catch (error) {
-        return GraphQLError({
-          message: error.message,
-          status: 500,
-          success: false,
-        });
+      if (!uploaded) {
+        throw new Error("Upload Failed in Wallpaper");
       }
-    },
+
+      return {
+        message: "Successfully Uploaded Wallpaper",
+        success: true,
+        status: 201,
+      };
+
+    }),
   },
 };
 

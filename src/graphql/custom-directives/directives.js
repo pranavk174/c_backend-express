@@ -29,7 +29,8 @@ export function authDirectiveTransformer(schema) {
           } catch (error) {
             logger.debug(error.message, "invalid data in di");
             // throw new GraphQLError(error.message || "Unauthorized");
-            return errorHandler(error.message, "Unauthenticated", 401);
+            // return errorHandler(error.message, error.name, 401, error);
+            throw error
           }
         };
       }
@@ -42,6 +43,7 @@ export function authDirectiveTransformer(schema) {
 export const isChatMemberDirective = (schema) => {
   return mapSchema(schema, {
     [MapperKind.OBJECT_FIELD]: (fieldConfig) => {
+
       const directive = getDirective(schema, fieldConfig, "isChatMember")?.[0];
 
       if (directive) {
@@ -54,7 +56,7 @@ export const isChatMemberDirective = (schema) => {
             args.chat_id || args.input?.chat_id || args.input?.chat_ids?.[0];
 
           if (!chat_id) {
-            throw new Error("Chat id missing");
+            return errorHandler("Chat id is required", "BAD_REQUEST", 400);
           }
 
           if (
@@ -73,11 +75,16 @@ export const isChatMemberDirective = (schema) => {
 
             // logger.debug(data, "dataaaaaaa");
             if (data.length !== args.input.chat_ids.length) {
-              throw new Error("User is not a member of all chats");
+              return errorHandler("User is not a member of all chats", "FORBIDDEN", 403);
+
             }
           }
 
           const data = await checkMemeberExists(prisma, chat_id, userId);
+
+          if (data.length < 1) {
+            return errorHandler("You are not a member of this chat", "FORBIDDEN", 403);
+          }
 
           return resolve(source, args, context, info);
         };

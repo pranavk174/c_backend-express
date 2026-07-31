@@ -48,9 +48,7 @@ export const checkMemeberExists = async (prisma, chat_id, user_id) => {
 
   `;
 
-  if (data.length < 1) {
-    throw new Error("You Are not the member of this chat Sorry....");
-  }
+
 
   return data[0];
 };

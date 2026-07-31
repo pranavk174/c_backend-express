@@ -1,5 +1,5 @@
 import { createYoga, createSchema } from "graphql-yoga";
-import { createPubSub } from "graphql-yoga";
+
 
 import { readFileSync } from "fs";
 import {
@@ -8,13 +8,7 @@ import {
 } from "./custom-directives/directives.js";
 import { useCookies } from "@whatwg-node/server-plugin-cookies";
 import mergedResolver from "./resolvers/merged.resolver.js";
-import {
-  useJWT,
-  extractFromCookie,
-  createInlineSigningKeyProvider,
-} from "@graphql-yoga/plugin-jwt";
 
-import path from "path";
 
 const baseSchema = readFileSync(
   new URL("./schema/base.schema.gql", import.meta.url),

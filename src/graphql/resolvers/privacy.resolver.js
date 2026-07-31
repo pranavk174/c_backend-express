@@ -1,5 +1,6 @@
 import prisma from "../../../prisma/prisma-client.js";
 import { validateToken } from "../../lib/tokenvalidator.js";
+import { asyncGraphqlAPIHandeler } from "../../lib/util.js";
 import { logger } from "../../utils/logger.js";
 
 const { privacy_user, privacy_settings } = prisma;
@@ -19,11 +20,12 @@ export const privacyResolvers = {
   //     },
   //   },
   Query: {
-    getPrivacySettings: async (_, __, ctx) => {
-      const payload = ctx.user;
-      const userId = payload.userId;
+    getPrivacySettings:
+      asyncGraphqlAPIHandeler(async (_, __, ctx) => {
+        const payload = ctx.user;
+        const userId = payload.userId;
 
-      try {
+
         const settings = await privacy_settings.findMany({
           where: {
             user_id: userId,
@@ -45,19 +47,11 @@ export const privacyResolvers = {
             items: settings,
           },
         };
-      } catch (error) {
-        // console.error("Error retrieving privacy settings:", error);
-        // throw new Error("Failed to retrieve privacy settings");
-        return {
-          message: "Failed to retrieve privacy settings",
-          error: error.message,
-          status: 500,
-          success: false,
-        };
-      }
-    },
-    getPrivacyUsers: async (_, { privacy_id }) => {
-      try {
+
+      }),
+    getPrivacyUsers:
+      asyncGraphqlAPIHandeler(async (_, { privacy_id }) => {
+
         const privacyUsers = await prisma.$queryRaw`
                                 select u.id,u.name
                                 from users u
@@ -66,9 +60,7 @@ export const privacyResolvers = {
                                 where p.privacy_id = ${privacy_id};
         `;
 
-        if (!privacyUsers) {
-          throw new Error();
-        }
+
 
         logger.debug(privacyUsers, "privacyUserssss");
 
@@ -81,30 +73,24 @@ export const privacyResolvers = {
             items: privacyUsers,
           },
         };
-      } catch (error) {
-        return {
-          message: "Something went wrong",
-          success: false,
-          status: 500,
-          error: error.message,
-        };
-      }
-    },
+
+      }),
   },
   Mutation: {
-    updatePrivacySettings: async (_, { privacy_type, entity_type }, ctx) => {
-      const payload = ctx.user;
-      const userId = payload.userId;
+    updatePrivacySettings:
+      asyncGraphqlAPIHandeler(async (_, { privacy_type, entity_type }, ctx) => {
+        const payload = ctx.user;
+        const userId = payload.userId;
 
-      if (!privacy_type || !entity_type) {
-        return {
-          message: "privacy_type and entity_type are required",
-          status: 400,
-          success: false,
-        };
-      }
-      // Update privacy settings for the user
-      try {
+        if (!privacy_type || !entity_type) {
+          return {
+            message: "privacy_type and entity_type are required",
+            status: 400,
+            success: false,
+          };
+        }
+        // Update privacy settings for the user
+
         const updatedSettings = await privacy_settings.upsert({
           where: {
             user_id_entity_type: {
@@ -133,39 +119,31 @@ export const privacyResolvers = {
           status: 200,
           success: true,
         };
-      } catch (error) {
-        // console.error("Error updating privacy settings:", error);
-        // throw new Error("Failed to update privacy settings");
-        return {
-          message: "Failed to update privacy settings",
-          error: error.message,
-          status: 500,
-          success: false,
-        };
-      }
-    },
-    updatePrivacyUsers: async (_, { input: { users, privacy_id } }, ctx) => {
-      const payload = ctx.user;
 
-      const userId = payload.userId;
+      }),
+    updatePrivacyUsers:
+      asyncGraphqlAPIHandeler(async (_, { input: { users, privacy_id } }, ctx) => {
+        const payload = ctx.user;
 
-      if (!users || users.length === 0 || !privacy_id) {
-        return {
-          message: "users and privacy_id are required",
-          status: 400,
-          success: false,
-        };
-      }
+        const userId = payload.userId;
 
-      if (users.includes(userId.toString())) {
-        return {
-          message: "User cannot be in the list of privacy users",
-          status: 400,
-          success: false,
-        };
-      }
+        if (!users || users.length === 0 || !privacy_id) {
+          return {
+            message: "users and privacy_id are required",
+            status: 400,
+            success: false,
+          };
+        }
 
-      try {
+        if (users.includes(userId.toString())) {
+          return {
+            message: "User cannot be in the list of privacy users",
+            status: 400,
+            success: false,
+          };
+        }
+
+
         const updatedUsers = await Promise.all(
           users.map(async (user) => {
             await privacy_user.upsert({
@@ -197,15 +175,7 @@ export const privacyResolvers = {
           status: 200,
           success: true,
         };
-      } catch (error) {
-        // logger.debug(error, "error");
-        return {
-          message: "Failed to update privacy users",
-          error: error.message,
-          status: 500,
-          success: false,
-        };
-      }
-    },
+
+      }),
   },
 };

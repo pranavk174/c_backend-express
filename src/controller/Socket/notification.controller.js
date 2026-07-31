@@ -1,10 +1,12 @@
 import prisma from "../../../prisma/prisma-client.js";
 import { Prisma } from "@prisma/client";
-import { logger } from "../../utils/logger.js";
-import { SEEN_NOTIFICATION } from "../../utils/events.js";
 
-export const seenNotification = async (socket, payload, data, callback) => {
-  try {
+import { SEEN_NOTIFICATION } from "../../utils/events.js";
+import { asyncSocketAPIHandeler } from "../../lib/util.js";
+
+export const seenNotification =
+  asyncSocketAPIHandeler(async (socket, payload, data, callback) => {
+
     const { notification_ids } = data;
 
     if (notification_ids.length === 0) {
@@ -73,13 +75,5 @@ export const seenNotification = async (socket, payload, data, callback) => {
       message: "Notifications processed successfully.",
       ...result,
     });
-  } catch (error) {
-    logger.error(error.message, "error message===");
-    return callback({
-      success: false,
-      status: 500,
-      message: "Something went wrong",
-      error: error.message,
-    });
-  }
-};
+
+  });

@@ -1,4 +1,5 @@
 import prisma from "../../../prisma/prisma-client.js";
+import { asyncGraphqlAPIHandeler } from "../../lib/util.js";
 import { logger } from "../../utils/logger.js";
 import { Prisma } from "@prisma/client";
 export const notificationResolver = {
@@ -15,11 +16,11 @@ export const notificationResolver = {
     },
   },
   Query: {
-    getNotification: async (_, __, ctx) => {
-      try {
-        const payload = ctx.user;
+    getNotification: asyncGraphqlAPIHandeler(async (_, __, ctx) => {
 
-        const res = await prisma.$queryRaw`
+      const payload = ctx.user;
+
+      const res = await prisma.$queryRaw`
           
           
        SELECT 
@@ -40,61 +41,55 @@ export const notificationResolver = {
           
           `;
 
-        // logger.debug(res, "resss from notificationssssss");
+      // logger.debug(res, "resss from notificationssssss");
 
-        if (res.length === 0) {
-          return {
-            message: "No Notification Found",
-            status: 200,
-            success: true,
-            data: {
-              _responseType: "notifications",
-              items: [],
-            },
-          };
-        }
-        const notifications = res.reduce((acc, item) => {
-          const data = {
-            notification_id: item.notification_id,
-            notification_type: item.notification_type,
-            name: item.name,
-            message: item.metadata.message,
-            time: item.created_at,
-            profile_pic: item.profile_pic,
-            reference_id: item.reference_id,
-          };
-
-          acc.push(data);
-
-          return acc;
-        }, []);
-        // logger.debug(notifications, "notofvtaiossss");
-
+      if (res.length === 0) {
         return {
-          message: "Suucessfull",
+          message: "No Notification Found",
           status: 200,
           success: true,
           data: {
             _responseType: "notifications",
-            items: notifications,
+            items: [],
           },
         };
-      } catch (error) {
-        logger.debug(error);
-        return {
-          message: "errorrrr",
-          status: 500,
-          success: false,
-        };
       }
-    },
+      const notifications = res.reduce((acc, item) => {
+        const data = {
+          notification_id: item.notification_id,
+          notification_type: item.notification_type,
+          name: item.name,
+          message: item.metadata.message,
+          time: item.created_at,
+          profile_pic: item.profile_pic,
+          reference_id: item.reference_id,
+        };
+
+        acc.push(data);
+
+        return acc;
+      }, []);
+      // logger.debug(notifications, "notofvtaiossss");
+
+      return {
+        message: "Suucessfull",
+        status: 200,
+        success: true,
+        data: {
+          _responseType: "notifications",
+          items: notifications,
+        },
+      };
+
+    }),
   },
   Mutation: {
-    seenNotification: async (_, { input: { notification_ids = [] } }, ctx) => {
-      const payload = ctx.user;
+    seenNotification:
+      asyncGraphqlAPIHandeler(async (_, { input: { notification_ids = [] } }, ctx) => {
+        const payload = ctx.user;
 
-      logger.debug(notification_ids, "notifciation idssss", payload);
-      try {
+        logger.debug(notification_ids, "notifciation idssss", payload);
+
         if (notification_ids.length === 0) {
           return {
             success: false,
@@ -190,16 +185,8 @@ export const notificationResolver = {
           message: "Notifications processed successfully.",
           ...result,
         };
-      } catch (error) {
-        logger.error(error.message, "error message===");
-        return {
-          success: false,
-          status: 500,
-          message: "Something went wrong",
-          error: error.message,
-        };
-      }
-    },
+
+      }),
   },
   Resolver: {},
 };

@@ -4,7 +4,7 @@ import {
   chatSocketIds,
   notificationSocketIds,
 } from "../../utils/socket.helper.js";
-import { chatNamespace, io, notificationNamespace } from "../../index.js";
+import { notificationNamespace } from "../../index.js";
 import prisma from "../../../prisma/prisma-client.js";
 import {
   checkMessageExists,
@@ -25,37 +25,45 @@ import {
   START_TYPING,
   STOP_TYPING,
 } from "../../utils/events.js";
-export const sendMessage = async (socket, payload, data, callback) => {
-  logger.debug(data, "new messageeeeee");
+import { asyncSocketAPIHandeler } from "../../lib/util.js";
+export const sendMessage =
+  asyncSocketAPIHandeler(async (socket, payload, data, callback) => {
+    logger.debug(data, "new messageeeeee");
 
-  const { content, media, chat_ids, reciever_ids } = data;
-  if (
-    (!content && !media) ||
-    (chat_ids && chat_ids.length < 1 && reciever_ids && reciever_ids.length < 1)
-  ) {
-    return callback({
-      message: "Data is missing...",
-      status: 400,
-      success: false,
-    });
-  }
+    const { content, media, chat_ids, reciever_ids } = data;
+    if (
+      (!content && !media) ||
+      (chat_ids && chat_ids.length < 1 && reciever_ids && reciever_ids.length < 1)
+    ) {
 
-  // if(reciever_ids && reciever_ids.incldes(payload.userID))
+      throw new Error("data is available bro")
+      // return callback({
+      //   message: "Data is missing...",
+      //   status: 400,
+      //   success: false,
+      // });
+    }
 
-  let chatId = null;
-  let chat_id = null;
-  if (chat_ids && chat_ids.length > 0) {
-    chatId = chat_ids[0];
-    chat_id = chat_ids[0];
-  }
-  logger.debug(reciever_ids, "type dataaa...", chat_ids);
-  try {
+    // if(reciever_ids && reciever_ids.incldes(payload.userID))
+
+    let chatId = null;
+    let chat_id = null;
+    if (chat_ids && chat_ids.length > 0) {
+      chatId = chat_ids[0];
+      chat_id = chat_ids[0];
+    }
+    logger.debug(reciever_ids, "type dataaa...", chat_ids);
+
     if (!chat_id) {
       const reciever_id = parseInt(reciever_ids[0]);
       const reciever = await chekUserExists(prisma, reciever_ids);
 
       if (!reciever.length > 0) {
-        throw new Error("Reciever Does not exists");
+        return {
+          message: "Reciever Does not exists",
+          status: 404,
+          success: false
+        }
       }
       // const memeberExists = await checkMemeberExists(prisma, reciever_ids);
 
@@ -73,19 +81,15 @@ export const sendMessage = async (socket, payload, data, callback) => {
 
         `;
 
-        if (!data || data.length < 1) {
-          throw new Error();
-        }
+
         chatId = data[0].id;
 
-        const chatmember = await prisma.$queryRaw`
+        await prisma.$queryRaw`
         
         insert into chat_member (member_id ,chat_id ) values(${payload.userId},${chatId}),(${reciever_id},${chatId})
         
         `;
-        if (!chatmember) {
-          throw new Error();
-        }
+
       }
 
       chatId = chatExists[0].chat_id;
@@ -107,19 +111,13 @@ export const sendMessage = async (socket, payload, data, callback) => {
         }),
       );
 
-      if (!addMedia) {
-        throw new Error();
-      }
-
       addMessage = addMessage.map((msg) => ({
         ...msg,
         preview: addMedia[0].url,
       }));
     }
 
-    if (!addMessage) {
-      throw new Error();
-    }
+
 
     // ISO string → milliseconds
     const ms = new Date(addMessage[0].created_at).getTime();
@@ -130,7 +128,6 @@ export const sendMessage = async (socket, payload, data, callback) => {
       logger.debug("Receiver room mein hai:", receiverInRoom);
       // logger.debug(`chat:${chat_ids[0]}`, "chat id room id");
       if (receiverInRoom) {
-        // Receiver room mein hai — room pe emit karo
 
         socket.to(`chat:${chat_ids[0]}`).emit(REFETCH_CHATS, addMessage);
       } else {
@@ -204,31 +201,24 @@ export const sendMessage = async (socket, payload, data, callback) => {
         message: addMessage[0],
       },
     });
-  } catch (error) {
-    logger.debug(error);
-    socket.emit(ERROR, error.message);
-    return callback({
-      success: false,
-      error: error.message,
-      status: 500,
-    });
-  }
-};
 
-export const replyMessage = async (socket, payload, data, callback) => {
-  logger.debug(data, "new reply messageeeeee");
+  });
 
-  const { message_ids, chat_ids, content, media, reciever_ids } = data;
-  if (message_ids.length !== 1 || (!content && !media)) {
-    socket.emit(ERROR, "Data is Missing");
-    return callback({
-      message: "Data is missing...",
-      status: 400,
-      success: false,
-    });
-  }
+export const replyMessage =
+  asyncSocketAPIHandeler(async (socket, payload, data, callback) => {
+    logger.debug(data, "new reply messageeeeee");
 
-  try {
+    const { message_ids, chat_ids, content, media, reciever_ids } = data;
+    if (message_ids.length !== 1 || (!content && !media)) {
+      socket.emit(ERROR, "Data is Missing");
+      return callback({
+        message: "Data is missing...",
+        status: 400,
+        success: false,
+      });
+    }
+
+
     const messageData = await checkMessageExists(prisma, message_ids);
 
     // const memeberdata = await checkMemeberExists(
@@ -290,35 +280,28 @@ export const replyMessage = async (socket, payload, data, callback) => {
       status: 201,
       success: true,
     });
-  } catch (error) {
-    logger.debug(error, "err in reply....");
-    socket.emit(ERROR, error.message);
-    return callback({
-      message: error.message,
-      status: 400,
-      success: false,
-    });
-  }
-};
 
-export const reactMessage = async (socket, payload, data, callback) => {
-  const { message_ids, chat_ids, reciever_ids, react_id: reaction_id } = data;
-  // logger.debug(data, "dataaaaaa");
-  if (!message_ids.length > 0 || !reaction_id) {
-    logger.debug("issue here......", !message_ids.length > 0, !reaction_id);
+  });
 
-    socket.emit(ERROR, "data is missing");
+export const reactMessage =
+  asyncSocketAPIHandeler(async (socket, payload, data, callback) => {
+    const { message_ids, chat_ids, reciever_ids, react_id: reaction_id } = data;
+    // logger.debug(data, "dataaaaaa");
+    if (!message_ids.length > 0 || !reaction_id) {
+      logger.debug("issue here......", !message_ids.length > 0, !reaction_id);
 
-    return callback({
-      message: "data is Missing",
-      success: false,
-      status: 400,
-    });
-  }
+      socket.emit(ERROR, "data is missing");
 
-  const message_id = message_ids[0];
+      return callback({
+        message: "data is Missing",
+        success: false,
+        status: 400,
+      });
+    }
 
-  try {
+    const message_id = message_ids[0];
+
+
     const [messaseData, reactionData] = await Promise.all([
       checkMessageExists(prisma, message_ids),
       prisma.$queryRaw`
@@ -385,31 +368,22 @@ updated_at = CURRENT_TIMESTAMP returning *;
       status: 201,
       success: true,
     };
-  } catch (error) {
-    logger.debug("error in reactiin", error);
-    socket.emit(ERROR, error.message);
 
-    return callback({
-      message: "Some thing went wrong",
-      status: 500,
-      success: false,
-      error: error.message,
-    });
-  }
-};
+  })
 
-export const seenMessage = async (socket, payload, data, callback) => {
-  const { message_ids, chat_id, reciever_id } = data;
-  // logger.debug(data, "dataaaaaaaaaaa");
-  if (message_ids && message_ids.length < 1) {
-    return callback({
-      message: "Message id is Missing",
-      status: 400,
-      success: false,
-    });
-  }
+export const seenMessage =
+  asyncSocketAPIHandeler(async (socket, payload, data, callback) => {
+    const { message_ids, chat_id, reciever_id } = data;
+    // logger.debug(data, "dataaaaaaaaaaa");
+    if (message_ids && message_ids.length < 1) {
+      return callback({
+        message: "Message id is Missing",
+        status: 400,
+        success: false,
+      });
+    }
 
-  try {
+
     await checkMessageExists(prisma, message_ids);
 
     // logger.debug(message_ids, "message idsss.");
@@ -452,32 +426,23 @@ export const seenMessage = async (socket, payload, data, callback) => {
       success: true,
       message_ids,
     });
-  } catch (error) {
-    logger.debug(error, "error ");
-    return callback({
-      message: "Something went wrong",
-      status: 500,
-      success: false,
-      error: error.message,
-      userId: payload,
-      message_ids,
-    });
-  }
-};
 
-export const editMessage = async (socket, payload, data, callback) => {
-  logger.debug(data, "seen dataaa");
-  const { message_ids, content, chat_id } = data;
-  if (message_ids.length < 1 || !content) {
-    return callback({
-      message: "Data is missing",
-      success: false,
-      status: 400,
-    });
-  }
+  });
 
-  const message_id = message_ids[0];
-  try {
+export const editMessage =
+  asyncSocketAPIHandeler(async (socket, payload, data, callback) => {
+    logger.debug(data, "seen dataaa");
+    const { message_ids, content, chat_id } = data;
+    if (message_ids.length < 1 || !content) {
+      return callback({
+        message: "Data is missing",
+        success: false,
+        status: 400,
+      });
+    }
+
+    const message_id = message_ids[0];
+
     const messageData = await prisma.$queryRaw`
         
         select id,content,sender_id from message where id = ${message_id} and is_deleted = false limit 1
@@ -521,54 +486,46 @@ WHERE id = ${message_id}    returning *
     //   receiverSocketId,
     // );
 
-    const data = updateMessage.map((d) => ({
+    const datas = updateMessage.map((d) => ({
       id: d.id,
       content: d.content,
       is_edited: true,
     }));
 
-    logger.debug(data, "dartaaa vent");
+    logger.debug(datas, "dartaaa vent");
     // socket.to(receiverSocketId).emit(MESSAGE_SEEN, data);
-    socket.to(`chat:${chat_id}`).emit(EDIT_MESSAGE, data[0]);
+    socket.to(`chat:${chat_id}`).emit(EDIT_MESSAGE, datas[0]);
     // }
-
     return callback({
       message: "Message Edited successfully",
       status: 201,
       success: true,
       data: updateMessage[0],
     });
-  } catch (err) {
-    return callback({
-      message: "Something went Wrong",
-      status: 500,
-      success: false,
-      error: err.message,
-    });
-  }
-};
+  });
 
-export const sendTypingEvent = async (
-  socket,
-  payload,
-  data,
-  callback,
-  typing = false,
-) => {
-  logger.debug(data, "new messageeeeee");
-  const { reciever_ids, chat_id } = data;
+export const sendTypingEvent =
+  asyncSocketAPIHandeler(async (
+    socket,
+    payload,
+    data,
+    callback,
+    typing = false,
+  ) => {
+    logger.debug(data, "new messageeeeee");
+    const { reciever_ids, chat_id } = data;
 
-  if (!data) {
-    return callback({
-      message: "Data is missing...",
-      status: 400,
-      success: false,
-    });
-  }
+    if (!data) {
+      return callback({
+        message: "Data is missing...",
+        status: 400,
+        success: false,
+      });
+    }
 
-  // if(reciever_ids && reciever_ids.incldes(payload.userID))
+    // if(reciever_ids && reciever_ids.incldes(payload.userID))
 
-  try {
+
     reciever_ids.forEach(async (reciever_id) => {
       const receiverInRoom = isReceiverInRoom(socket, reciever_id, chat_id);
       logger.debug("Receiver room mein hai:", receiverInRoom);
@@ -592,13 +549,5 @@ export const sendTypingEvent = async (
     // socket.emit(REFETCH_CHATS, addMessage);
 
     // const chatData = await
-  } catch (error) {
-    logger.debug(error);
-    socket.emit(ERROR, error.message);
-    return callback({
-      success: false,
-      error: error.message,
-      status: 500,
-    });
-  }
-};
+
+  });

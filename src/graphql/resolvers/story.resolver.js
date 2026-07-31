@@ -1,5 +1,6 @@
 import prisma from "../../../prisma/prisma-client.js";
 import { validateToken } from "../../lib/tokenvalidator.js";
+import { asyncGraphqlAPIHandeler } from "../../lib/util.js";
 import { logger } from "../../utils/logger.js";
 
 const { story, story_likes, chat, chat_member, message } = prisma;
@@ -19,8 +20,9 @@ const Storyresolver = {
     },
   },
   Query: {
-    getStoryById: async (_, { id }, context) => {
-      try {
+    getStoryById:
+      asyncGraphqlAPIHandeler(async (_, { id }, context) => {
+
         const payload = context.user;
         const storyData = await story.findFirst({
           where: {
@@ -62,17 +64,11 @@ GROUP BY s.id;
           success: true,
           data: storyData,
         };
-      } catch (error) {
-        return {
-          message: "Something went wrong",
-          status: 500,
-          success: false,
-          error: error.message,
-        };
-      }
-    },
-    getAllStories: async (_, __, context) => {
-      try {
+
+      }),
+    getAllStories:
+      asyncGraphqlAPIHandeler(async (_, __, context) => {
+
         const payload = context.user;
         //         const stories = await prisma.$queryRaw`
         //    SELECT
@@ -476,30 +472,23 @@ ORDER BY
             stories: [...Object.values(grouped2), ...Object.values(grouped)],
           },
         };
-      } catch (error) {
-        logger.debug(error, "errpor");
-        return {
-          message: "Something went wrong",
-          status: 500,
-          success: false,
-          error: error.message,
-        };
-      }
-    },
+
+      }),
   },
   Mutation: {
-    createStory: async (
-      _,
-      { input: { content, text_data, message_ids = [] } },
-      context,
-    ) => {
-      if ((!content || content.trim() === "") && message_ids.length === 0) {
-        return {
-          message: "Content is required",
-          status: 400,
-        };
-      }
-      try {
+    createStory:
+      asyncGraphqlAPIHandeler(async (
+        _,
+        { input: { content, text_data, message_ids = [] } },
+        context,
+      ) => {
+        if ((!content || content.trim() === "") && message_ids.length === 0) {
+          return {
+            message: "Content is required",
+            status: 400,
+          };
+        }
+
         const payload = context.user;
 
         if (message_ids.length > 0) {
@@ -539,25 +528,18 @@ ORDER BY
           status: 201,
           success: true,
         };
-      } catch (error) {
-        logger.debug(error, "errrorrrr in creating story...");
-        return {
-          message: "Something went wrong",
-          status: 500,
-          success: false,
-          error: error.message,
-        };
-      }
-    },
-    likeStory: async (_, { input: { id, like, reaction_id } }, context) => {
-      if (!id || like === null || like === undefined) {
-        return {
-          message: "Like value is required",
-          status: 400,
-          success: false,
-        };
-      }
-      try {
+
+      }),
+    likeStory:
+      asyncGraphqlAPIHandeler(async (_, { input: { id, like, reaction_id } }, context) => {
+        if (!id || like === null || like === undefined) {
+          return {
+            message: "Like value is required",
+            status: 400,
+            success: false,
+          };
+        }
+
         const payload = context.user;
 
         const storyData = await story.findFirst({
@@ -609,24 +591,18 @@ ORDER BY
           status: 200,
           success: true,
         };
-      } catch (error) {
-        return {
-          message: "Something went wrong",
-          status: 500,
-          success: false,
-          error: error.message,
-        };
-      }
-    },
-    seenStory: async (_, { id }, context) => {
-      if (!id) {
-        return {
-          message: "Story ID is required",
-          status: 400,
-          success: false,
-        };
-      }
-      try {
+
+      }),
+    seenStory:
+      asyncGraphqlAPIHandeler(async (_, { id }, context) => {
+        if (!id) {
+          return {
+            message: "Story ID is required",
+            status: 400,
+            success: false,
+          };
+        }
+
         const payload = context.user;
         const storyData = await story.findFirst({
           where: { id: parseInt(id), is_deleted: false },
@@ -680,25 +656,18 @@ ORDER BY
           status: 200,
           success: true,
         };
-      } catch (error) {
-        return {
-          message: "Something went wrong",
-          status: 500,
-          success: false,
 
-          error: error.message,
-        };
-      }
-    },
-    replyToStory: async (_, { id, content }, context) => {
-      if (!content || content.trim() === "") {
-        return {
-          message: "Content is required",
-          status: 400,
-          success: false,
-        };
-      }
-      try {
+      }),
+    replyToStory:
+      asyncGraphqlAPIHandeler(async (_, { id, content }, context) => {
+        if (!content || content.trim() === "") {
+          return {
+            message: "Content is required",
+            status: 400,
+            success: false,
+          };
+        }
+
         const payload = context.user;
 
         logger.debug(payload, "payloadddddd");
@@ -780,28 +749,22 @@ chat_id ,sender_id ,content ,story_id, created_at) values(${chatid[0].chat_id} ,
           success: true,
           data: reply,
         };
-      } catch (error) {
-        return {
-          message: "Something went wrong",
-          status: 500,
-          success: false,
-          error: error.message,
-        };
-      }
-    },
-    forwardStory: async (
-      _,
-      { input: { storyId, targets, message } },
-      context,
-    ) => {
-      if (!targets || targets.length === 0) {
-        return {
-          message: "At least one target is required",
-          status: 400,
-          success: false,
-        };
-      }
-      try {
+
+      }),
+    forwardStory:
+      asyncGraphqlAPIHandeler(async (
+        _,
+        { input: { storyId, targets, message } },
+        context,
+      ) => {
+        if (!targets || targets.length === 0) {
+          return {
+            message: "At least one target is required",
+            status: 400,
+            success: false,
+          };
+        }
+
         const payload = context.user;
         const storyData = await story.findFirst({
           where: { id: parseInt(storyId), is_deleted: false },
@@ -863,7 +826,7 @@ chat_id ,sender_id ,content ,story_id, created_at) values(${chatid[0].chat_id} ,
                 throw new Error("You are not a member of the target group");
               }
 
-              const forward = await prisma.$queryRaw`
+              await prisma.$queryRaw`
                 insert into message (
                   chat_id ,sender_id ,content ,story_id, created_at) values(${parseInt(target.chatId)} , ${parseInt(payload.userId)} , ${message}, ${parseInt(storyData.id)}, NOW()
                 )
@@ -881,17 +844,11 @@ chat_id ,sender_id ,content ,story_id, created_at) values(${chatid[0].chat_id} ,
           status: 200,
           success: true,
         };
-      } catch (error) {
-        return {
-          message: "Something went wrong",
-          status: 500,
-          success: false,
-          error: error.message,
-        };
-      }
-    },
-    deleteStory: async (_, { id }, context) => {
-      try {
+
+      }),
+    deleteStory:
+      asyncGraphqlAPIHandeler(async (_, { id }, context) => {
+
         const payload = context.user;
         const storyData = await story.findFirst({
           where: { id: parseInt(id), is_deleted: false },
@@ -923,15 +880,8 @@ chat_id ,sender_id ,content ,story_id, created_at) values(${chatid[0].chat_id} ,
           status: 200,
           success: true,
         };
-      } catch (error) {
-        return {
-          message: "Something went wrong",
-          status: 500,
-          success: false,
-          error: error.message,
-        };
-      }
-    },
+
+      }),
   },
 };
 

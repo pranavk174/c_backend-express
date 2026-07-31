@@ -1,7 +1,8 @@
 import prisma from "../../../prisma/prisma-client.js";
+import { asyncSocketAPIHandeler } from "../../lib/util.js";
 import {
   NEW_NOTIFICATION,
-  SEEN_NOTIFICATION,
+
   STORY_LIKE,
   STORY_SEEN,
 } from "../../utils/events.js";
@@ -15,10 +16,9 @@ import {
 } from "../../utils/socket.helper.js";
 
 const { story, story_likes, chat, chat_member } = prisma;
-export const replyStory = async (socket, payload, data, callback) => {
-  const { id, content } = data;
-
-  try {
+export const replyStory =
+  asyncSocketAPIHandeler(async (socket, payload, data, callback) => {
+    const { id, content } = data;
     logger.debug(payload, "payloadddddd");
     const storyData = await story.findFirst({
       where: { id: parseInt(id), is_deleted: false },
@@ -98,111 +98,97 @@ chat_id ,sender_id ,content ,story_id, created_at) values(${chatid[0].chat_id} ,
       success: true,
       data: reply,
     });
-  } catch (error) {
-    logger.debug(error, "errorrr in story reply.");
-    return callback({
-      message: "Something went wrong",
-      status: 500,
-      success: false,
-      error: error.message,
-    });
-  }
-};
 
-export const seenStory = async (socket, payload, data, callback) => {
+  });
+
+export const seenStory = asyncSocketAPIHandeler(async (socket, payload, data, callback) => {
+
   const { id } = data;
   // logger.debug(payload, "payload data");
-  try {
-    const storyData = await story.findFirst({
-      where: { id: parseInt(id), is_deleted: false },
-    });
-    if (!storyData) {
-      return callback({
-        message: "Story not found",
-        status: 404,
-        success: false,
-      });
-    }
-    if (storyData.user_id === payload.userId) {
-      return callback({
-        message: "You cannot mark your own story as seen",
-        status: 400,
-        success: false,
-      });
-    }
 
-    const seenData = await prisma.$queryRaw`
+  const storyData = await story.findFirst({
+    where: { id: parseInt(id), is_deleted: false },
+  });
+  if (!storyData) {
+    return callback({
+      message: "Story not found",
+      status: 404,
+      success: false,
+    });
+  }
+  if (storyData.user_id === payload.userId) {
+    return callback({
+      message: "You cannot mark your own story as seen",
+      status: 400,
+      success: false,
+    });
+  }
+
+  const seenData = await prisma.$queryRaw`
         
         select user_id from story_seen where story_id = ${parseInt(id)} and user_id = ${payload.userId};
         
         `;
 
-    // logger.debug(seenData, "seenDataaaa....");
+  // logger.debug(seenData, "seenDataaaa....");
 
-    if (seenData.length > 0) {
-      return callback({
-        message: "Story already marked as seen",
-        status: 400,
-        success: false,
-      });
-    }
-
-    // Mark the story as seen by creating an entry in a hypothetical "story_views" table
-    const seen = await prisma.story_seen.create({
-      data: {
-        story_id: parseInt(id),
-        user_id: payload.userId,
-        seen_at: new Date(),
-      },
-    });
-
-    if (!seen) {
-      throw new Error("Failed to mark the story as seen");
-    }
-
-    const receiverSocketId = getSockets(storyData.user_id);
-    const res = getSocketmembers(storyData.user_id);
-    logger.debug(
-      receiverSocketId,
-      res,
-      "receiver socket idddddd",
-
-      onlineUsers,
-      chatSocketIds,
-    );
-
-    seen.profile_pic = payload.profile_pic;
-    seen.name = payload.name;
-    socket.to(receiverSocketId).emit(STORY_SEEN, seen, (response) => {
-      logger.debug("emitted datat in responseeee");
-    });
-
+  if (seenData.length > 0) {
     return callback({
-      message: "Story marked as seen",
-      status: 200,
-      success: true,
-    });
-  } catch (error) {
-    return callback({
-      message: "Something went wrong",
-      status: 500,
-      success: false,
-
-      error: error.message,
-    });
-  }
-};
-
-export const likeStory = async (socket, payload, data, callback) => {
-  const { id, like, reaction_id } = data;
-  if (!id || like === null || like === undefined) {
-    return {
-      message: "Like value is required",
+      message: "Story already marked as seen",
       status: 400,
       success: false,
-    };
+    });
   }
-  try {
+
+  // Mark the story as seen by creating an entry in a hypothetical "story_views" table
+  const seen = await prisma.story_seen.create({
+    data: {
+      story_id: parseInt(id),
+      user_id: payload.userId,
+      seen_at: new Date(),
+    },
+  });
+
+  if (!seen) {
+    throw new Error("Failed to mark the story as seen");
+  }
+
+  const receiverSocketId = getSockets(storyData.user_id);
+  const res = getSocketmembers(storyData.user_id);
+  logger.debug(
+    receiverSocketId,
+    res,
+    "receiver socket idddddd",
+
+    onlineUsers,
+    chatSocketIds,
+  );
+
+  seen.profile_pic = payload.profile_pic;
+  seen.name = payload.name;
+  socket.to(receiverSocketId).emit(STORY_SEEN, seen, (response) => {
+    logger.debug("emitted datat in responseeee");
+  });
+
+  return callback({
+    message: "Story marked as seen",
+    status: 200,
+    success: true,
+  });
+
+})
+  ;
+export const likeStory =
+  asyncSocketAPIHandeler(async (socket, payload, data, callback) => {
+    const { id, like, reaction_id } = data;
+    if (!id || like === null || like === undefined) {
+      return {
+        message: "Like value is required",
+        status: 400,
+        success: false,
+      };
+    }
+
     const storyData = await story.findFirst({
       where: { id: parseInt(id), is_deleted: false },
     });
@@ -274,12 +260,5 @@ export const likeStory = async (socket, payload, data, callback) => {
       status: 200,
       success: true,
     });
-  } catch (error) {
-    return callback({
-      message: "Something went wrong",
-      status: 500,
-      success: false,
-      error: error.message,
-    });
-  }
-};
+
+  });
