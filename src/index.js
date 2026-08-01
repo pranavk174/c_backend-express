@@ -1,4 +1,5 @@
 import "dotenv/config";
+import "./cron.js";
 import { yoga } from "./graphql/endpoints.js";
 // import { Server } from "socket.io";
 import express from "express";
