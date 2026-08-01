@@ -1,7 +1,7 @@
 /* eslint-disable no-undef */
 import cron from "node-cron";
 import { logger } from "./utils/logger.js";
-cron.schedule("*/1 * * * *", async () => {
+cron.schedule("*/5 * * * *", async () => {
   logger.debug("triggered cronjob");
   try {
     const response = await fetch(process.env.HEALTH_URL);
