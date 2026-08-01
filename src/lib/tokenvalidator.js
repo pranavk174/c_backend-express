@@ -65,7 +65,7 @@ export const generateTokens = (id, email, device_id) => {
     },
     process.env.JWT_SECRET,
     {
-      expiresIn: "1m",
+      expiresIn: "15m",
     },
   );
 
