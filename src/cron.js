@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
 import cron from "node-cron";
-
+import { logger } from "./utils/logger.js";
 cron.schedule("*/1 * * * *", async () => {
   logger.debug("triggered cronjob");
   try {
