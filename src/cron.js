@@ -4,7 +4,7 @@ import axios from "axios";
 cron.schedule("*/5 * * * *", async () => {
   try {
      try {
-    const response = await fetch(URL);
+    const response = await fetch(process.env.HEALTH_URL);
 
     if (!response.ok) {
       throw new Error(`HTTP Error: ${response.status}`);
