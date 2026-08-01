@@ -3,24 +3,17 @@ import axios from "axios";
 
 cron.schedule("*/5 * * * *", async () => {
   try {
-    const res = await axios.post(
-      "https://your-api.com/graphql",
-      {
-        query: `
-          query {
-            health
-          }
-        `,
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      },
-    );
+     try {
+    const response = await fetch(URL);
 
-    console.log(res.data);
-  } catch (err) {
-    console.error(err.message);
+    if (!response.ok) {
+      throw new Error(`HTTP Error: ${response.status}`);
+    }
+
+    console.log("Health check successful");
+  } catch (error) {
+    console.error("Health check failed:", error.message);
   }
+
+  
 });
