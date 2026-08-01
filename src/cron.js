@@ -1,9 +1,9 @@
+/* eslint-disable no-undef */
 import cron from "node-cron";
-import axios from "axios";
 
-cron.schedule("*/5 * * * *", async () => {
+cron.schedule("*/1 * * * *", async () => {
+  logger.debug("triggered cronjob");
   try {
-     try {
     const response = await fetch(process.env.HEALTH_URL);
 
     if (!response.ok) {
@@ -14,6 +14,4 @@ cron.schedule("*/5 * * * *", async () => {
   } catch (error) {
     console.error("Health check failed:", error.message);
   }
-
-  
 });
