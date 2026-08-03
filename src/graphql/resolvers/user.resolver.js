@@ -2,13 +2,15 @@
 import prisma from "../../../prisma/prisma-client.js";
 
 import bcrypt from "bcrypt";
-
+import { AppError } from "../../lib/errorHandler.js";
 import jwt from "jsonwebtoken";
 import { sendMail } from "../../utils/nodemainler.js";
-import { errorHandler, generateTokens } from "../../lib/tokenvalidator.js";
+import { generateTokens } from "../../lib/tokenvalidator.js";
 
 import { logger } from "../../utils/logger.js";
 import { asyncGraphqlAPIHandeler } from "../../lib/util.js";
+import { chekOTP } from "../../lib/helpers.js";
+import { inputValidate } from "../../lib/schemavalidator.js";
 const userResolvers = {
   ResponseData: {
     __resolveType(obj) {
@@ -29,46 +31,39 @@ const userResolvers = {
     },
   },
   Query: {
-    getUser: async (_, __, context) => {
-      try {
-        const payload = context.user;
-        const data = await prisma.users.findFirst({
-          where: {
-            email: payload.email,
-          },
+    getUser: asyncGraphqlAPIHandeler(async (_, __, context) => {
+      const payload = context.user;
+      const data = await prisma.users.findFirst({
+        where: {
+          email: payload.email,
+        },
+      });
+
+      if (!data) {
+        logger.debug("error in data getting");
+        throw new AppError({
+          message: "User Not Found",
+          status: 404,
+          code: "NOT_FOUND_ERROR",
         });
-
-        if (!data) {
-          throw new Error();
-        }
-
-        // logger.debug(data, "userssss");
-
-        return {
-          message: "successfully retrived",
-          status: 200,
-          data: {
-            _responseType: "User",
-            ...data,
-          },
-          success: true,
-        };
-      } catch (error) {
-        logger.debug(error, "error in get user");
-        return {
-          message: "Something went wrong",
-          status: 500,
-          success: false,
-          error: error.message,
-        };
       }
-    },
-    getUsers:
-      async (_, __, ctx) => {
-        try {
-          const payload = ctx.user;
 
-          const users = await prisma.$queryRaw`
+      // logger.debug(data, "userssss");
+
+      return {
+        message: "successfully retrived",
+        status: 200,
+        data: {
+          _responseType: "User",
+          ...data,
+        },
+        success: true,
+      };
+    }),
+    getUsers: asyncGraphqlAPIHandeler(async (_, __, ctx) => {
+      const payload = ctx.user;
+
+      const users = await prisma.$queryRaw`
         SELECT
         u.*,
         MAX(cm.chat_id) AS chat_id
@@ -90,32 +85,30 @@ const userResolvers = {
         
         `;
 
-          return {
-            message: "Successfully retrieved Users",
-            status: 200,
-            success: true,
-            data: {
-              _responseType: "Users",
-              items: users,
-            },
-          };
+      return {
+        message: "Successfully retrieved Users",
+        status: 200,
+        success: true,
+        data: {
+          _responseType: "Users",
+          items: users,
+        },
+      };
 
-          // logger.debug(users, "users dataaaaaa.");
-        } catch (error) {
-          logger.debug(error, "in get userssssssss");
-          errorHandler(error.message, "INTERNAL_SERVER_ERROR", 500);
-        }
-      },
+      // logger.debug(users, "users dataaaaaa.");
+    }),
   },
   Mutation: {
     sendOtpMail: asyncGraphqlAPIHandeler(async (_, { email }) => {
       if (!email) {
-        return {
+        throw new AppError({
           message: "Email is Missing",
           status: 400,
-          success: false,
-        };
+          code: "DATA_MISSING_ERROR",
+        });
       }
+
+      inputValidate(email, "email")
 
 
       const exists = await prisma.users.findFirst({
@@ -131,11 +124,11 @@ const userResolvers = {
           exists.account_status === "deleted" ||
           exists.account_status === "suspended"
         ) {
-          return {
+          throw new AppError({
             message: `Account is ${exists.account_status}, contact support`,
             status: 403,
-            success: false,
-          };
+            code: "ACCOUNT_BLOCK_ERROR",
+          });
         }
 
         // const sent = await sendMail(email, otp);
@@ -195,87 +188,81 @@ const userResolvers = {
         status: 201,
         success: true,
       };
-
     }),
-    verifyOtp: asyncGraphqlAPIHandeler(async (
-      _,
-      { input: { email, otp, device_id, ip_address, location, device_name } },
-      context,
-    ) => {
-      if (
-        !email ||
-        !otp ||
-        !device_id ||
-        !ip_address ||
-        !location ||
-        !device_name
-      ) {
-        return {
-          message: "data field is missing",
-          status: 400,
-          success: false,
-        };
-      }
-
-
-      const user = await prisma.users.findFirst({
-        where: { email },
-      });
-
-      // if (user) throw new Error("error in uer");
-
-      if (user) {
+    verifyOtp: asyncGraphqlAPIHandeler(
+      async (
+        _,
+        { input: { email, otp, device_id, ip_address, location, device_name }, input },
+        context,
+      ) => {
         if (
-          user.account_status === "deleted" ||
-          user.account_status === "suspended"
+          !email ||
+          !otp ||
+          !device_id ||
+          !ip_address ||
+          !location ||
+          !device_name
         ) {
-          return {
-            message: `Account is ${user.account_status}, contact support`,
-            status: 403,
-            success: false,
-          };
+          throw new AppError({
+            message: "data field is missing",
+            status: 400,
+            code: "DATA_MISSING_ERROR",
+          });
         }
-        const record = await prisma.otp.findFirst({
+
+
+        // Object.keys(input).forEach((ip) => {
+
+        //   logger.debug(ip, "ip dataaaaa")
+        //   if (ip === "email") {
+        //     inputValidate(input[ip], "email")
+        //   }
+        //   if (
+        //     ip === 'otp'
+        //   ) {
+        //     inputValidate(input[ip], "otp")
+        //   } else {
+        //     inputValidate(input[ip], "string")
+        //   }
+
+
+        // })
+
+
+        const user = await prisma.users.findFirst({
           where: { email },
         });
 
-        if (!record) {
-          return { message: "OTP not found", status: 400, success: false };
-        }
-        const isMatch = await bcrypt.compare(String(otp), record.otp);
-        if (!isMatch) {
-          return { message: "Invalid OTP", status: 400, success: false };
-          // throw new Error("Invalid Otp");
-        }
+        // if (user) throw new Error("error in uer");
 
-        const isExpired = new Date(record.expires_at) < new Date();
-        if (isExpired) {
-          return { message: "Expired OTP", status: 400, success: false };
-        }
+        if (user) {
+          if (
+            user.account_status === "deleted" ||
+            user.account_status === "suspended"
+          ) {
+            throw new AppError({
+              message: `Account is ${exists.account_status}, contact support`,
+              status: 403,
+              code: "ACCOUNT_BLOCK_ERROR",
+            });
+          }
+          const record = await prisma.otp.findFirst({
+            where: { email },
+          });
 
-        // logger.debug(
-        //   record.otp,
-        //   "record.otp1",
-        //   otp,
-        //   "otp1",
-        //   record,
-        //   email,
-        //   user,
-        // );
 
-        // cleanup
-        await prisma.otp.delete({ where: { email } });
+          await chekOTP(otp, record)
 
-        const { accessToken, refreshToken } = generateTokens(
-          user.id,
-          email,
-          device_id,
-        );
-        logger.debug({
-          user,
-        });
+          // cleanup
+          await prisma.otp.delete({ where: { email } });
 
-        await prisma.$queryRaw`
+          const { accessToken, refreshToken } = generateTokens(
+            user.id,
+            email,
+            device_id,
+          );
+
+          await prisma.$queryRaw`
   INSERT INTO devices (
     user_id,
     device_id,
@@ -307,194 +294,179 @@ const userResolvers = {
     expires_at = NOW() + INTERVAL '7 days'
   RETURNING *;
 `;
-        const cookieOptions = {
-          httpOnly: true,
-          secure: true,
-          sameSite: "none",
-          path: "/",
-        };
+          const cookieOptions = {
+            httpOnly: true,
+            secure: true,
+            sameSite: "none",
+            path: "/",
+          };
 
-        context.res.cookie("accessToken", accessToken, {
-          ...cookieOptions,
-          maxAge: 24 * 60 * 60 * 1000, // 15 min in ms
+          context.res.cookie("accessToken", accessToken, {
+            ...cookieOptions,
+            maxAge: 24 * 60 * 60 * 1000, // 15 min in ms
+          });
+
+          context.res.cookie("refreshToken", refreshToken, {
+            ...cookieOptions,
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in ms
+          });
+
+          context.res.cookie("theme", user.theme, {
+            httpOnly: false,
+            secure: true,
+            sameSite: "none",
+            path: "/",
+          });
+          return {
+            message: "Login Successful",
+            status: 200,
+            success: true,
+            data: {
+              _responseType: "User",
+              ...user,
+            },
+          };
+        }
+
+        // =========================
+        // ✅ NEW USER REGISTER
+        // =========================
+        const record = await prisma.register.findFirst({
+          where: { email },
         });
 
-        context.res.cookie("refreshToken", refreshToken, {
-          ...cookieOptions,
-          maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in ms
+        await chekOTP(otp, record)
+
+        const is_verified = await prisma.register.update({
+          where: { email },
+          data: {
+            is_verified: true,
+          },
         });
 
-        context.res.cookie("theme", user.theme, {
-          httpOnly: false,
-          secure: true,
-          sameSite: "none",
-          path: "/",
-        });
         return {
-          message: "Login Successful",
+          message: "OTP Verified Successfully",
           status: 200,
           success: true,
           data: {
-            _responseType: "User",
-            ...user,
+            _responseType: "verifyOtpData",
+            ...{ email, is_verified: is_verified.is_verified },
           },
         };
-      }
-
-      // =========================
-      // ✅ NEW USER REGISTER
-      // =========================
-      const record = await prisma.register.findFirst({
-        where: { email },
-      });
-
-      if (!record) {
-        return { message: "OTP not found", status: 400, success: false };
-      }
-      const isMatch = await bcrypt.compare(String(otp), record.otp);
-      if (!isMatch) {
-        return { message: "Invalid OTP", status: 400, success: false };
-        // throw new Error("Invalid Otp");
-      }
-
-      const isExpired = new Date(record.expires_at) < new Date();
-      if (isExpired) {
-        return { message: "Expired OTP", status: 400, success: false };
-      }
-
-      // create user
-      // const newUser = await prisma.users.create({
-      //   data: { email },
-      // });
-
-      const is_verified = await prisma.register.update({
-        where: { email },
-        data: {
-          is_verified: true,
-        },
-      });
-
-      return {
-        message: "OTP Verified Successfully",
-        status: 200,
-        success: true,
-        data: {
-          _responseType: "verifyOtpData",
-          ...{ email, is_verified: is_verified.is_verified },
-        },
-      };
-
-    })
-    ,
-    createUser: asyncGraphqlAPIHandeler(async (
-      _,
-      {
-        input: {
-          fname,
-          lname,
-          user_name,
-          email,
-          mobile,
-          bio = "Hey! There I am using chat App",
-          profile_pic = "",
-          cover_pic = null,
-        },
       },
-    ) => {
-      if (!fname || !lname || !email || !mobile || !user_name) {
-        return {
-          message: "Input data is missing , please fill all those fields",
-          status: 400,
-          success: false,
-        };
-      }
-
-      const isFound = await prisma.users.findFirst({
-        where: {
-          OR: [
-            { email: email },
-            { mobile: mobile },
-            { user_name: user_name },
-          ],
-        },
-      });
-
-      if (isFound) {
-        return {
-          message:
-            "User Already exists with these data , try with different email or mobile or user name",
-          status: 400,
-          success: false,
-        };
-      }
-
-      const isExists = await prisma.register.findFirst({
-        where: {
-          email,
-        },
-      });
-
-      if (!isExists) {
-        return {
-          message: "User is not Registered ,Register please",
-          status: 402,
-          success: false,
-        };
-      }
-
-      if (!isExists.is_verified) {
-        const SALT_ROUNDS = 10;
-
-        const expires_at = new Date(Date.now() + 5 * 60 * 1000); // 5 min
-        const otp = Math.floor(100000 + Math.random() * 900000);
-        logger.debug(otp, "OTP");
-        // generated OTP
-
-        const hashedOtp = await bcrypt.hash(otp.toString(), SALT_ROUNDS);
-        await prisma.register.update({
-          where: {
+    ),
+    createUser: asyncGraphqlAPIHandeler(
+      async (
+        _,
+        {
+          input: {
+            fname,
+            lname,
+            user_name,
             email,
+            mobile,
+            bio = "Hey! There I am using chat App",
+            profile_pic = "",
+            cover_pic = null,
           },
-          data: {
-            otp: hashedOtp.toString(),
-            expires_at,
+        },
+      ) => {
+        if (!fname || !lname || !email || !mobile || !user_name) {
+          throw new AppError({
+            message: "Input data is missing , please fill all those fields",
+            status: 400,
+            code: "NOT_FOUND_ERROR",
+          });
+        }
+
+
+
+        const isFound = await prisma.users.findFirst({
+          where: {
+            OR: [
+              { email: email },
+              { mobile: mobile },
+              { user_name: user_name },
+            ],
           },
         });
 
-        return {
-          message:
-            "User is not verified , Please Verify Otp Sent Successfully",
-          status: 402,
-          success: false,
-        };
-      }
+        if (isFound) {
+          throw new AppError({
+            message:
+              "User Already exists with these data , try with different email or mobile or user name",
+            status: 400,
+            code: "EXISTS_ERROR",
+          });
+        }
 
-      const [created, deleted] = await Promise.all([
-        prisma.users.create({
-          data: {
-            name: fname + " " + lname,
-            email,
-            mobile,
-            user_name,
-            bio,
-            profile_pic,
-            cover_pic,
-          },
-        }),
-        prisma.register.delete({
+        const isExists = await prisma.register.findFirst({
           where: {
             email,
           },
-        }),
-      ]);
+        });
 
-      return {
-        message: "User Successfully created",
-        status: 201,
-        success: true,
-      };
+        if (!isExists) {
+          throw new AppError({
+            message: "User is not Registered ,Register please",
+            status: 402,
+            code: "REGISTER_ERROR",
+          });
+        }
 
-    }),
+        if (!isExists.is_verified) {
+          const SALT_ROUNDS = 10;
+
+          const expires_at = new Date(Date.now() + 5 * 60 * 1000); // 5 min
+          const otp = Math.floor(100000 + Math.random() * 900000);
+          logger.debug(otp, "OTP");
+          // generated OTP
+
+          const hashedOtp = await bcrypt.hash(otp.toString(), SALT_ROUNDS);
+          await prisma.register.update({
+            where: {
+              email,
+            },
+            data: {
+              otp: hashedOtp.toString(),
+              expires_at,
+            },
+          });
+
+          throw new AppError({
+            message:
+              "User is not verified , Please Verify Otp Sent Successfully",
+            status: 402,
+            code: "REGISTER_ERROR",
+          });
+        }
+
+        await Promise.all([
+          prisma.users.create({
+            data: {
+              name: fname + " " + lname,
+              email,
+              mobile,
+              user_name,
+              bio,
+              profile_pic,
+              cover_pic,
+            },
+          }),
+          prisma.register.delete({
+            where: {
+              email,
+            },
+          }),
+        ]);
+
+        return {
+          message: "User Successfully created",
+          status: 201,
+          success: true,
+        };
+      },
+    ),
     updateUser: asyncGraphqlAPIHandeler(async (_, { input }, context) => {
       const updateData = {};
 
@@ -512,7 +484,6 @@ const userResolvers = {
         };
       }
 
-
       const payload = context.user;
       await prisma.users.update({
         where: {
@@ -526,37 +497,33 @@ const userResolvers = {
         status: 201,
         success: true,
       };
+    }),
+    updatePreference: asyncGraphqlAPIHandeler(
+      async (_, { input: { theme } }, ctx) => {
+        const payload = ctx.user;
 
-    })
-    ,
-    updatePreference: asyncGraphqlAPIHandeler(async (_, { input: { theme } }, ctx) => {
-      const payload = ctx.user;
-
-
-      const updated = await prisma.$queryRaw`
+        const updated = await prisma.$queryRaw`
   
   update  users set theme = ${theme} where id = ${payload.userId} returning *
   
   
   `;
 
-      await ctx.res.cookie("theme", updated[0].theme, {
-        httpOnly: false,
-        secure: true,
-        sameSite: "none",
-        path: "/",
-      });
+        await ctx.res.cookie("theme", updated[0].theme, {
+          httpOnly: false,
+          secure: true,
+          sameSite: "none",
+          path: "/",
+        });
 
-      return {
-        message: "Preference Updated Successfully",
-        status: 201,
-        success: true,
-      };
-
-    })
-    ,
+        return {
+          message: "Preference Updated Successfully",
+          status: 201,
+          success: true,
+        };
+      },
+    ),
     deleteUser: asyncGraphqlAPIHandeler(async (_, { action_type }, context) => {
-
       const payload = context.user;
 
       const exists = await prisma.users.findFirst({
@@ -606,9 +573,7 @@ const userResolvers = {
           },
           data: {
             account_status:
-              action_type.toLowerCase() === "delete"
-                ? "deleted"
-                : "suspended",
+              action_type.toLowerCase() === "delete" ? "deleted" : "suspended",
             account_status_changed_at: new Date(),
           },
         }),
@@ -630,10 +595,8 @@ const userResolvers = {
         status: 200,
         success: true,
       };
-
     }),
     generateRefreshToken: asyncGraphqlAPIHandeler(async (_, __, context) => {
-
       const cookie = context.req.cookies?.refreshToken;
       if (!cookie) throw new Error("No refresh token");
 
@@ -684,10 +647,8 @@ const userResolvers = {
         success: true,
         status: 200,
       };
-    })
-    ,
+    }),
     logout: asyncGraphqlAPIHandeler(async (_, __, context) => {
-
       const payload = context.user;
       // logger.debug(payload, "payloadddddd");
 
@@ -712,111 +673,112 @@ const userResolvers = {
         success: true,
         status: 200,
       };
-    })
-    ,
-    blockUser: asyncGraphqlAPIHandeler(async (_, { input: { blocked_user_id, reason } }, context) => {
-      const payload = context.user;
+    }),
+    blockUser: asyncGraphqlAPIHandeler(
+      async (_, { input: { blocked_user_id, reason } }, context) => {
+        const payload = context.user;
 
-      if (!reason || reason.trim() === "" || !blocked_user_id) {
+        if (!reason || reason.trim() === "" || !blocked_user_id) {
+          return {
+            message: "Data is missing",
+            status: 400,
+            success: false,
+          };
+        }
+
+        const exists = await prisma.users.findFirst({
+          where: {
+            id: blocked_user_id,
+          },
+        });
+
+        if (!exists) {
+          return {
+            message: "User not found",
+            status: 404,
+            success: false,
+          };
+        }
+
+        const existing = await prisma.block.findFirst({
+          where: {
+            user_id: payload.userId,
+            blocked_user_id,
+            unblocked_at: null,
+          },
+        });
+
+        if (existing?.blocked) {
+          return {
+            message: "User already blocked",
+            status: 200,
+            success: true,
+          };
+        }
+
+        await prisma.block.create({
+          data: {
+            user_id: payload.userId,
+            blocked_user_id,
+            blocked: true,
+            reason,
+            blocked_at: new Date(),
+          },
+        });
+
         return {
-          message: "Data is missing",
-          status: 400,
-          success: false,
-        };
-      }
-
-      const exists = await prisma.users.findFirst({
-        where: {
-          id: blocked_user_id,
-        },
-      });
-
-      if (!exists) {
-        return {
-          message: "User not found",
-          status: 404,
-          success: false,
-        };
-      }
-
-      const existing = await prisma.block.findFirst({
-        where: {
-          user_id: payload.userId,
-          blocked_user_id,
-          unblocked_at: null,
-        },
-      });
-
-      if (existing?.blocked) {
-        return {
-          message: "User already blocked",
+          message: "User Blocked Successfully",
           status: 200,
           success: true,
         };
-      }
+      },
+    ),
+    unBlockUser: asyncGraphqlAPIHandeler(
+      async (_, { input: { blocked_user_id } }, context) => {
+        const payload = context.user;
 
-      await prisma.block.create({
-        data: {
-          user_id: payload.userId,
-          blocked_user_id,
-          blocked: true,
-          reason,
-          blocked_at: new Date(),
-        },
-      });
+        if (!blocked_user_id) {
+          return {
+            message: "User ID is missing",
+            status: 400,
+            success: false,
+          };
+        }
 
-      return {
-        message: "User Blocked Successfully",
-        status: 200,
-        success: true,
-      };
+        const exists = await prisma.users.findFirst({
+          where: {
+            id: blocked_user_id,
+          },
+        });
 
-    }),
-    unBlockUser: asyncGraphqlAPIHandeler(async (_, { input: { blocked_user_id } }, context) => {
-      const payload = context.user;
+        if (!exists) {
+          return {
+            message: "User not found",
+            status: 404,
+            success: false,
+          };
+        }
 
-      if (!blocked_user_id) {
+        await prisma.block.updateMany({
+          where: {
+            user_id: payload.userId,
+            blocked_user_id,
+            unblocked_at: null,
+          },
+
+          data: {
+            blocked: false,
+            unblocked_at: new Date(),
+          },
+        });
+
         return {
-          message: "User ID is missing",
-          status: 400,
-          success: false,
+          message: "User Unblocked Successfully",
+          status: 200,
+          success: true,
         };
-      }
-
-      const exists = await prisma.users.findFirst({
-        where: {
-          id: blocked_user_id,
-        },
-      });
-
-      if (!exists) {
-        return {
-          message: "User not found",
-          status: 404,
-          success: false,
-        };
-      }
-
-      await prisma.block.updateMany({
-        where: {
-          user_id: payload.userId,
-          blocked_user_id,
-          unblocked_at: null,
-        },
-
-        data: {
-          blocked: false,
-          unblocked_at: new Date(),
-        },
-      });
-
-      return {
-        message: "User Unblocked Successfully",
-        status: 200,
-        success: true,
-      };
-
-    })
+      },
+    ),
   },
 };
 

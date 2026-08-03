@@ -29,22 +29,22 @@ type Users {
 }
 
 input UserInput {
-  fname: String!
-  lname: String!
-  user_name: String!
-  email: String!
-  bio: String
-  mobile: String!
-  profile_pic: String
-  cover_pic: String
+  fname: String!  @inputvalidate(type: "string")
+  lname: String!  @inputvalidate(type: "string")
+  user_name: String!  @inputvalidate(type: "string")
+  email: String!  @inputvalidate(type: "email")
+  bio: String  @inputvalidate(type: "string")
+  mobile: String!  @inputvalidate(type: "mobile")
+  profile_pic: String  @inputvalidate(type: "url")
+  cover_pic: String  @inputvalidate(type: "url")
 }
 
 input UpdateUserInput {
-  name: String
-  bio: String
-  cover_pic: String
-  profile_pic: String
-  theme: theme
+  name: String @inputvalidate(type: "string")
+  bio: String @inputvalidate(type: "string")
+  cover_pic: String @inputvalidate(type: "url")
+  profile_pic: String @inputvalidate(type: "url")
+  theme: theme @inputvalidate(type: "string")
 }
 
 type verifyOtpData {
@@ -66,12 +66,14 @@ input personalizationInput {
 }
 
 input verifyOtpInput {
-  email: String!
-  otp: String!
-  device_id: String!
-  ip_address: String!
-  location: String!
-  device_name: String!
+
+  device_id: String! @inputvalidate(type: "string")
+  ip_address: String! @inputvalidate(type: "string")
+  location: String! @inputvalidate(type: "string")
+  device_name: String! @inputvalidate(type: "string")
+  email: String! @inputvalidate(type: "email")
+  mobile: String! @inputvalidate(type: "mobile")
+  otp: String! @inputvalidate(type: "otp")
 }
 
 enum AccountStatus {

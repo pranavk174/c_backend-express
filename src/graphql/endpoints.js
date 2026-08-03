@@ -1,14 +1,15 @@
 import { createYoga, createSchema } from "graphql-yoga";
 
-
 import { readFileSync } from "fs";
 import {
   authDirectiveTransformer,
   isChatMemberDirective,
+  inputValidatorDirective
 } from "./custom-directives/directives.js";
 import { useCookies } from "@whatwg-node/server-plugin-cookies";
 import mergedResolver from "./resolvers/merged.resolver.js";
-
+import { AppError } from "../lib/errorHandler.js";
+import { logger } from "../utils/logger.js";
 
 const baseSchema = readFileSync(
   new URL("./schema/base.schema.gql", import.meta.url),
@@ -52,13 +53,16 @@ let schema = createSchema({
   typeDefs,
   resolvers: mergedResolver,
 });
-
+schema = inputValidatorDirective(schema)
 schema = isChatMemberDirective(schema);
 schema = authDirectiveTransformer(schema);
 
+
 export const yoga = createYoga({
   schema,
+
   graphqlEndpoint: "/graphql",
+
   context: ({ req, res }) => ({
     req,
     res,

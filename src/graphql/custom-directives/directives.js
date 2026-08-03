@@ -94,3 +94,39 @@ export const isChatMemberDirective = (schema) => {
     },
   });
 };
+
+
+export function inputValidatorDirective(schema) {
+  return mapSchema(schema, {
+    [MapperKind.OBJECT_FIELD]: (fieldConfig) => {
+      const authDirective = getDirective(schema, fieldConfig, "inputvalidate")?.[0];
+
+      if (authDirective) {
+        const originalResolver = fieldConfig.resolve || defaultFieldResolver;
+
+        fieldConfig.resolve = async function (source, args, context, info) {
+          try {
+            logger.debug("INPUT DIRECTIVE RUNNING");
+
+            const { ...inputs } = args
+
+            logger.debug(inputs, "input dataaaa...")
+
+
+
+
+            // ORIGINAL RESOLVER
+            return await originalResolver(source, args, context, info);
+          } catch (error) {
+            logger.debug(error.message, "invalid data in inputValdiate");
+            // throw new GraphQLError(error.message || "Unauthorized");
+            // return errorHandler(error.message, error.name, 401, error);
+            throw error
+          }
+        };
+      }
+
+      return fieldConfig;
+    },
+  });
+}

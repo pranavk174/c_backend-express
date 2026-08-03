@@ -1,7 +1,9 @@
 import { chatSocketIds } from "../utils/socket.helper.js";
 import { createPubSub } from "graphql-yoga";
-
+import bcrypt from "bcrypt";
 import { logger } from "../utils/logger.js";
+import { AppError } from "./errorHandler.js";
+import { numberex, stringex } from "./regex.js";
 
 export const checkMessageExists = async (prisma, message_ids) => {
   const data = await prisma.$queryRaw`
@@ -73,6 +75,37 @@ HAVING
 
   return data;
 };
+
+export const chekOTP = async (otp, record) => {
+  if (!record) {
+    throw new AppError({
+      message: "OTP not found",
+      status: 404,
+      code: "OTP_ERROR",
+    });
+  }
+  const isMatch = await bcrypt.compare(String(otp), record.otp);
+  if (!isMatch) {
+    throw new AppError({
+      message: "Invalid OTP",
+      status: 400,
+      code: "OTP_ERROR",
+    });
+    // throw new Error("Invalid Otp");
+  }
+
+  const isExpired = new Date(record.expires_at) < new Date();
+  if (isExpired) {
+    throw new AppError({
+      message: "Expired OTP",
+      status: 400,
+      code: "OTP_ERROR",
+    });
+  }
+  return true
+}
+
+
 
 export const getSockets = (member) => {
   const receiverSocketId = chatSocketIds.get(String(member));
