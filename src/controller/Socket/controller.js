@@ -26,17 +26,19 @@ import {
   STOP_TYPING,
 } from "../../utils/events.js";
 import { asyncSocketAPIHandeler } from "../../lib/util.js";
-export const sendMessage =
-  asyncSocketAPIHandeler(async (socket, payload, data, callback) => {
+export const sendMessage = asyncSocketAPIHandeler(
+  async (socket, payload, data, callback) => {
     logger.debug(data, "new messageeeeee");
 
     const { content, media, chat_ids, reciever_ids } = data;
     if (
       (!content && !media) ||
-      (chat_ids && chat_ids.length < 1 && reciever_ids && reciever_ids.length < 1)
+      (chat_ids &&
+        chat_ids.length < 1 &&
+        reciever_ids &&
+        reciever_ids.length < 1)
     ) {
-
-      throw new Error("data is available bro")
+      throw new Error("data is available bro");
       // return callback({
       //   message: "Data is missing...",
       //   status: 400,
@@ -62,8 +64,8 @@ export const sendMessage =
         return {
           message: "Reciever Does not exists",
           status: 404,
-          success: false
-        }
+          success: false,
+        };
       }
       // const memeberExists = await checkMemeberExists(prisma, reciever_ids);
 
@@ -81,7 +83,6 @@ export const sendMessage =
 
         `;
 
-
         chatId = data[0].id;
 
         await prisma.$queryRaw`
@@ -89,10 +90,9 @@ export const sendMessage =
         insert into chat_member (member_id ,chat_id ) values(${payload.userId},${chatId}),(${reciever_id},${chatId})
         
         `;
-
+      } else {
+        chatId = chatExists[0].chat_id;
       }
-
-      chatId = chatExists[0].chat_id;
     }
     let addMessage = await prisma.$queryRaw`
         
@@ -117,8 +117,6 @@ export const sendMessage =
       }));
     }
 
-
-
     // ISO string → milliseconds
     const ms = new Date(addMessage[0].created_at).getTime();
     addMessage[0] = { ...addMessage[0], created_at: ms, seen_users: [] };
@@ -128,7 +126,6 @@ export const sendMessage =
       logger.debug("Receiver room mein hai:", receiverInRoom);
       // logger.debug(`chat:${chat_ids[0]}`, "chat id room id");
       if (receiverInRoom) {
-
         socket.to(`chat:${chat_ids[0]}`).emit(REFETCH_CHATS, addMessage);
       } else {
         const receiverSocketId = chatSocketIds.get(String(reciever_id));
@@ -201,11 +198,11 @@ export const sendMessage =
         message: addMessage[0],
       },
     });
+  },
+);
 
-  });
-
-export const replyMessage =
-  asyncSocketAPIHandeler(async (socket, payload, data, callback) => {
+export const replyMessage = asyncSocketAPIHandeler(
+  async (socket, payload, data, callback) => {
     logger.debug(data, "new reply messageeeeee");
 
     const { message_ids, chat_ids, content, media, reciever_ids } = data;
@@ -217,7 +214,6 @@ export const replyMessage =
         success: false,
       });
     }
-
 
     const messageData = await checkMessageExists(prisma, message_ids);
 
@@ -280,11 +276,11 @@ export const replyMessage =
       status: 201,
       success: true,
     });
+  },
+);
 
-  });
-
-export const reactMessage =
-  asyncSocketAPIHandeler(async (socket, payload, data, callback) => {
+export const reactMessage = asyncSocketAPIHandeler(
+  async (socket, payload, data, callback) => {
     const { message_ids, chat_ids, reciever_ids, react_id: reaction_id } = data;
     // logger.debug(data, "dataaaaaa");
     if (!message_ids.length > 0 || !reaction_id) {
@@ -300,7 +296,6 @@ export const reactMessage =
     }
 
     const message_id = message_ids[0];
-
 
     const [messaseData, reactionData] = await Promise.all([
       checkMessageExists(prisma, message_ids),
@@ -368,11 +363,11 @@ updated_at = CURRENT_TIMESTAMP returning *;
       status: 201,
       success: true,
     };
+  },
+);
 
-  })
-
-export const seenMessage =
-  asyncSocketAPIHandeler(async (socket, payload, data, callback) => {
+export const seenMessage = asyncSocketAPIHandeler(
+  async (socket, payload, data, callback) => {
     const { message_ids, chat_id, reciever_id } = data;
     // logger.debug(data, "dataaaaaaaaaaa");
     if (message_ids && message_ids.length < 1) {
@@ -382,7 +377,6 @@ export const seenMessage =
         success: false,
       });
     }
-
 
     await checkMessageExists(prisma, message_ids);
 
@@ -426,11 +420,11 @@ export const seenMessage =
       success: true,
       message_ids,
     });
+  },
+);
 
-  });
-
-export const editMessage =
-  asyncSocketAPIHandeler(async (socket, payload, data, callback) => {
+export const editMessage = asyncSocketAPIHandeler(
+  async (socket, payload, data, callback) => {
     logger.debug(data, "seen dataaa");
     const { message_ids, content, chat_id } = data;
     if (message_ids.length < 1 || !content) {
@@ -502,16 +496,11 @@ WHERE id = ${message_id}    returning *
       success: true,
       data: updateMessage[0],
     });
-  });
+  },
+);
 
-export const sendTypingEvent =
-  asyncSocketAPIHandeler(async (
-    socket,
-    payload,
-    data,
-    callback,
-    typing = false,
-  ) => {
+export const sendTypingEvent = asyncSocketAPIHandeler(
+  async (socket, payload, data, callback, typing = false) => {
     logger.debug(data, "new messageeeeee");
     const { reciever_ids, chat_id } = data;
 
@@ -524,7 +513,6 @@ export const sendTypingEvent =
     }
 
     // if(reciever_ids && reciever_ids.incldes(payload.userID))
-
 
     reciever_ids.forEach(async (reciever_id) => {
       const receiverInRoom = isReceiverInRoom(socket, reciever_id, chat_id);
@@ -549,5 +537,5 @@ export const sendTypingEvent =
     // socket.emit(REFETCH_CHATS, addMessage);
 
     // const chatData = await
-
-  });
+  },
+);

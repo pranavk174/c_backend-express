@@ -4,7 +4,7 @@ import { readFileSync } from "fs";
 import {
   authDirectiveTransformer,
   isChatMemberDirective,
-  inputValidatorDirective
+  inputValidatorDirective,
 } from "./custom-directives/directives.js";
 import { useCookies } from "@whatwg-node/server-plugin-cookies";
 import mergedResolver from "./resolvers/merged.resolver.js";
@@ -53,10 +53,9 @@ let schema = createSchema({
   typeDefs,
   resolvers: mergedResolver,
 });
-schema = inputValidatorDirective(schema)
+schema = inputValidatorDirective(schema);
 schema = isChatMemberDirective(schema);
 schema = authDirectiveTransformer(schema);
-
 
 export const yoga = createYoga({
   schema,
@@ -67,20 +66,5 @@ export const yoga = createYoga({
     req,
     res,
   }),
-  plugins: [
-    useCookies(),
-    // useJWT({
-    //   signingKeyProviders: [
-    //     createInlineSigningKeyProvider(process.env.JWT_SECRET),
-    //   ],
-    //   tokenLookupLocations: [
-    //     extractFromCookie({ name: "accessToken" }), // 👈 cookie se token uthao
-    //   ],
-    //   extendContext: true,
-    //   reject: {
-    //     missingToken: true, // 👈 taaki public routes chale
-    //     invalidToken: true,
-    //   },
-    // }),
-  ],
+  plugins: [useCookies()],
 });

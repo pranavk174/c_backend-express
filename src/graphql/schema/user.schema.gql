@@ -29,14 +29,14 @@ type Users {
 }
 
 input UserInput {
-  fname: String!  @inputvalidate(type: "string")
-  lname: String!  @inputvalidate(type: "string")
-  user_name: String!  @inputvalidate(type: "string")
-  email: String!  @inputvalidate(type: "email")
-  bio: String  @inputvalidate(type: "string")
-  mobile: String!  @inputvalidate(type: "mobile")
-  profile_pic: String  @inputvalidate(type: "url")
-  cover_pic: String  @inputvalidate(type: "url")
+  fname: String! @inputvalidate(type: "string")
+  lname: String! @inputvalidate(type: "string")
+  user_name: String! @inputvalidate(type: "string")
+  email: String! @inputvalidate(type: "email")
+  bio: String @inputvalidate(type: "string")
+  mobile: String! @inputvalidate(type: "mobile")
+  profile_pic: String @inputvalidate(type: "url")
+  cover_pic: String @inputvalidate(type: "url")
 }
 
 input UpdateUserInput {
@@ -66,13 +66,12 @@ input personalizationInput {
 }
 
 input verifyOtpInput {
-
   device_id: String! @inputvalidate(type: "string")
   ip_address: String! @inputvalidate(type: "string")
   location: String! @inputvalidate(type: "string")
   device_name: String! @inputvalidate(type: "string")
   email: String! @inputvalidate(type: "email")
-  mobile: String! @inputvalidate(type: "mobile")
+  mobile: String @inputvalidate(type: "mobile")
   otp: String! @inputvalidate(type: "otp")
 }
 

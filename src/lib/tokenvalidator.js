@@ -57,12 +57,13 @@ export const validateCookie = async (token) => {
   return payload;
 };
 
-export const generateTokens = (id, email, device_id) => {
+export const generateTokens = (id, email, device_id, { ...values }) => {
   const accessToken = jwt.sign(
     {
       userId: id,
       device_id,
       email,
+      ...values,
     },
     process.env.JWT_SECRET,
     {

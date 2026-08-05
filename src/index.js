@@ -1,6 +1,6 @@
 import "dotenv/config";
 import "./cron.js";
-import "./cronjobs/dbcleaner.js"
+import "./cronjobs/dbcleaner.js";
 import { yoga } from "./graphql/endpoints.js";
 // import { Server } from "socket.io";
 import express from "express";
@@ -15,7 +15,7 @@ import { socketAuthMiddleware } from "./middlewares/auth.js";
 import { chatSockets } from "./Sockets/chatNameSpaces.js";
 import { allowedOrigins } from "./lib/helpers.js";
 import { socketServer } from "./Sockets/Socketserver.js";
-import { notificationSocketIds } from "./utils/socket.helper.js";
+
 import { NotificationSocket } from "./Sockets/NotificationsNamespace.js";
 // import { authMiddleware } from "./middlewares/auth.js";
 const app = express();
@@ -24,19 +24,22 @@ const app = express();
 export const { io, server } = socketServer(app);
 app.use(cookieParser());
 
+// this CORS feature is only for request coming from the borwser
 app.use(
   cors({
     origin: (origin, callback) => {
       // mobile apps/postman/server-side requests
       if (!origin) {
+        // return callback(new Error("CORS not allowed"));
         return callback(null, true);
       }
 
       if (allowedOrigins.includes(origin)) {
-        callback(null, true);
+        return callback(null, true);
       } else {
-        // callback(new Error("CORS not allowed"));
-        callback(null, true);
+        logger.debug("error in  cors", allowedOrigins, origin);
+        // callback(new Error("CORS not allowed")); // comment this code if the request is coming from the node server
+        // callback(null, true); // comment this code if request  comming from Browser
       }
     },
 

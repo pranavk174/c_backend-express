@@ -1,10 +1,11 @@
 import { chatSocketIds } from "../utils/socket.helper.js";
 import { createPubSub } from "graphql-yoga";
 import bcrypt from "bcrypt";
+import { Prisma } from "@prisma/client";
 import { logger } from "../utils/logger.js";
-import { AppError } from "./errorHandler.js";
+import { AppError, BadRequestError } from "./errorHandler.js";
 import { numberex, stringex } from "./regex.js";
-
+import { asyncHandeler } from "./util.js";
 export const checkMessageExists = async (prisma, message_ids) => {
   const data = await prisma.$queryRaw`
 
@@ -17,7 +18,7 @@ export const checkMessageExists = async (prisma, message_ids) => {
   `;
 
   if (data.length !== message_ids.length) {
-    throw new Error("Some messages do not exist or are deleted");
+    throw new BadRequestError("Some messages do not exist or are deleted");
   }
 
   return data;
@@ -30,7 +31,7 @@ export const chekUserExists = async (prisma, users) => {
     select id from users where id = ANY(${users}) and account_status = 'active'
     `;
   if (data.length !== users.length) {
-    throw new Error("Some Uers does nnot Exists or has been deleted");
+    throw new BadRequestError("Some Uers does nnot Exists or has been deleted");
   }
 
   logger.debug(data);
@@ -49,8 +50,6 @@ export const checkMemeberExists = async (prisma, chat_id, user_id) => {
     AND member_id = ${user_id}
 
   `;
-
-
 
   return data[0];
 };
@@ -75,6 +74,49 @@ HAVING
 
   return data;
 };
+
+export const createChat = asyncHandeler(
+  async ({ payload, reciever_id, chat_type = "private", prisma }) => {
+    if (chat_type === "group") {
+      const created = await prisma.$queryRaw`
+      
+      insert into chat (chat_type) values('group') returning id ;
+      
+      `;
+
+      const members = [
+        ...reciever_id.map(
+          (id) => Prisma.sql` (${created[0].id}, ${id} , 'member') `,
+        ),
+        Prisma.sql`  (${created[0].id} , ${payload.userId} , 'admin')
+      `,
+      ];
+
+      await prisma.$queryRaw`
+      insert into chat_member (chat_id , member_id , role) values ${Prisma.join(members)}
+      `;
+
+      return created;
+    } else {
+      const data = await prisma.$queryRaw`
+          
+          insert into chat (chat_type) values(${chat_type})  RETURNING id;
+
+
+          `;
+
+      const chatId = data[0].id;
+
+      await prisma.$queryRaw`
+          
+          insert into chat_member (member_id ,chat_id ) values(${payload.userId},${chatId}),(${reciever_id},${chatId})
+          
+          `;
+
+      return chatId;
+    }
+  },
+);
 
 export const chekOTP = async (otp, record) => {
   if (!record) {
@@ -102,10 +144,8 @@ export const chekOTP = async (otp, record) => {
       code: "OTP_ERROR",
     });
   }
-  return true
-}
-
-
+  return true;
+};
 
 export const getSockets = (member) => {
   const receiverSocketId = chatSocketIds.get(String(member));

@@ -1,5 +1,7 @@
+/* eslint-disable no-undef */
 import nodemailer from "nodemailer";
 import { logger } from "./logger.js";
+import { AppError } from "../lib/errorHandler.js";
 // Create a transporter using SMTP
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
@@ -39,20 +41,40 @@ export const sendMail = async (email, otp) => {
 
     switch (err.code) {
       case "ECONNECTION":
+        throw new AppError({
+          message: err.message,
+          status: 500,
+          code: err.code,
+        });
       case "ETIMEDOUT":
-        console.error("Network error - retry later:", err.message);
+        throw new AppError({
+          message: err.message,
+          status: 500,
+          code: err.code,
+        });
 
-        break;
       case "EAUTH":
-        console.error("Authentication failed:", err.message);
-        break;
+        throw new AppError({
+          message: err.message,
+          status: 500,
+          code: err.code,
+        });
       case "EENVELOPE":
-        console.error("Invalid recipients:", err.rejected);
-        break;
+        throw new AppError({
+          message: err.message,
+          status: 500,
+          code: err.code,
+          details: err.rejected,
+        });
       default:
-        console.error("Send failed:", err.message);
+        throw new AppError({
+          message: err.message,
+          status: 500,
+          code: err.code,
+          details: err.rejected,
+        });
     }
 
-    return false;
+    // return false;
   }
 };
