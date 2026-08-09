@@ -9,8 +9,14 @@ export const isDev = process.env.NODE_ENV !== "production";
 export const asyncGraphqlAPIHandeler =
   (resolver) => async (parent, input, context, info) => {
     try {
-      return await resolver(parent, input, context, info);
+      const response = await resolver(parent, input, context, info);
+      // logger.info(response, "response in dataa")
+      return response
     } catch (error) {
+      logger.debug(error, "error classs nhi")
+      if (error instanceof AppError) {
+        throw error;
+      }
       if (error.name === "PrismaClientKnownRequestError") {
         throw new AppError({
           message: error.message,
@@ -20,13 +26,13 @@ export const asyncGraphqlAPIHandeler =
         });
       }
       if (error.name === "ReferenceError") {
-        logger.debug(error.message, "error classs nhi")
+
         const message = isDev ? error.message : "Something went Wrong";
         const code = isDev ? "INTERNAL_ERROR" : "VARIABLE_ERROR";
         throw new AppError({ message, status: 500, code, details: error.stack });
       }
       if (error.name === "TypeError") {
-        throw new AppError(error.message, 500, "USER_NOT_FOUND_ERROR");
+        throw new AppError({ message: error.message, status: 500, code: "USER_NOT_FOUND_ERROR" });
       }
       if (error.name === "ZodError") {
         logger.debug(error.issues[0].message, "error in zod ");
@@ -36,6 +42,16 @@ export const asyncGraphqlAPIHandeler =
           code: "INPUT_VALIDATION_ERROR",
           detail: error.issues[0],
         });
+      }
+      if (error.name === "TokenExpiredError") {
+
+        throw new AppError({
+          message: error.message,
+          status: 401,
+          code: "TOKEN_EXPIRED",
+          // detail: error.issues[0],
+        });
+
       }
 
       if (error.consumedPoints >= 6) {
@@ -50,12 +66,14 @@ export const asyncGraphqlAPIHandeler =
           },
         });
       }
-      throw error;
-      // throw new AppError({
-      //   message: error.message,
-      //   code: "INTERNAL_SERVER_ERROR",
-      //   status: 500,
-      // });
+      // throw error;
+      if (error.name === 'Error') {
+        throw new AppError({
+          message: error.message,
+          code: "INTERNAL_SERVER_ERROR",
+          status: 500,
+        });
+      }
 
       // return errorHandler(error.message, "INTERNAL_SERVER_ERROR", 500);
     }

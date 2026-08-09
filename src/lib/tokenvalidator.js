@@ -1,6 +1,9 @@
+/* eslint-disable no-undef */
 import jwt from "jsonwebtoken";
 import { GraphQLError } from "graphql";
 // import { logger } from "@/utils/logger.js";
+// import { logger } from "../utils/logger.js";
+import { AppError } from "./errorHandler.js";
 import { logger } from "../utils/logger.js";
 
 export const errorHandler = (message, code, status, error) => {
@@ -18,22 +21,15 @@ export const errorHandler = (message, code, status, error) => {
 
 export const validateToken = async (context) => {
   let payload;
-  try {
-    const cookie = await context.request.cookieStore?.get("accessToken");
-
-    // logger.debug(cookie, "cookiessssss", context);
-    // logger.debug(cookie, "cookies dataaaaa");
-    if (!cookie) throw new Error("No Access token");
-
-    const accessToken = cookie.value;
-    payload = jwt.verify(accessToken, process.env.JWT_SECRET);
-  } catch (err) {
-    logger.debug(err.message, "errrrrrrrrr in validate token");
-
-    // throw new Error(err.message || "Invalid Access token");
-    return errorHandler(err.message, "Unauthenticated", 401, err);
-  }
-
+  const cookie = await context.request.cookieStore?.get("accessToken");
+  if (!cookie)
+    throw new AppError({
+      message: "No Access Token",
+      status: 401,
+      code: "FORBIDDEN"
+    });
+  const accessToken = cookie.value;
+  payload = jwt.verify(accessToken, process.env.JWT_SECRET);
   return payload;
 };
 
@@ -46,18 +42,21 @@ export const validateCookie = async (token) => {
     const accessToken = token;
     payload = jwt.verify(accessToken, process.env.JWT_SECRET);
   } catch (err) {
-    return errorHandler(
-      err.message || "Invalid Access token",
-      "UNAUTHORIZED",
-      401,
-      err,
-    );
+    if (err.name === "TokenExpiredError")
+      throw new AppError({
+        message: err.message,
+        status: 401,
+        code: "FORBIDDEN"
+      })
+
+    throw err
   }
 
   return payload;
 };
 
-export const generateTokens = (id, email, device_id, { ...values }) => {
+export const generateTokens = (id, email, device_id, values = {},) => {
+
   const accessToken = jwt.sign(
     {
       userId: id,
@@ -67,15 +66,18 @@ export const generateTokens = (id, email, device_id, { ...values }) => {
     },
     process.env.JWT_SECRET,
     {
-      expiresIn: "15m",
+      expiresIn: "1m",
     },
   );
+
+  console.log(values, "values data in generate token")
 
   const refreshToken = jwt.sign(
     {
       userId: id,
       device_id,
       email,
+      ...values,
     },
     process.env.REFRESH_SECRET,
     {
@@ -84,4 +86,5 @@ export const generateTokens = (id, email, device_id, { ...values }) => {
   );
 
   return { accessToken, refreshToken };
+
 };

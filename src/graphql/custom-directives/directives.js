@@ -6,6 +6,7 @@ import { errorHandler, validateToken } from "../../lib/tokenvalidator.js";
 import { checkMemeberExists } from "../../lib/helpers.js";
 import { Prisma } from "@prisma/client";
 import { logger } from "../../utils/logger.js";
+import { asyncGraphqlAPIHandeler } from "../../lib/util.js";
 export function authDirectiveTransformer(schema) {
   return mapSchema(schema, {
     [MapperKind.OBJECT_FIELD]: (fieldConfig) => {
@@ -14,8 +15,9 @@ export function authDirectiveTransformer(schema) {
       if (authDirective) {
         const originalResolver = fieldConfig.resolve || defaultFieldResolver;
 
-        fieldConfig.resolve = async function (source, args, context, info) {
-          try {
+        fieldConfig.resolve =
+          asyncGraphqlAPIHandeler(async function (source, args, context, info) {
+
             // logger.debug("AUTH DIRECTIVE RUNNING");
 
             // TOKEN VALIDATION
@@ -26,13 +28,8 @@ export function authDirectiveTransformer(schema) {
 
             // ORIGINAL RESOLVER
             return await originalResolver(source, args, context, info);
-          } catch (error) {
-            logger.debug(error, "invalid data in di");
-            // throw new GraphQLError(error.message || "Unauthorized");
-            // return errorHandler(error.message, error.name, 401, error);
-            throw error;
-          }
-        };
+
+          })
       }
 
       return fieldConfig;

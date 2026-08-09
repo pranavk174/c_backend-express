@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
 import prisma from "../../../../prisma/prisma-client.js";
-
+import { Prisma } from "@prisma/client";
 import { logger } from "../../../utils/logger.js";
 import { asyncGraphqlAPIHandeler } from "../../../lib/util.js";
 import { BadRequestError } from "../../../lib/errorHandler.js";
@@ -59,7 +59,7 @@ export const createNewGroupMutation = asyncGraphqlAPIHandeler(
     await prisma.$transaction(async (tx) => {
       const created = await createChat({
         payload,
-        reciever_ids: members,
+        reciever_ids: member_ids,
         chat_type: "group",
         prisma: tx,
       });

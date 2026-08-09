@@ -9,7 +9,7 @@ export class AppError extends GraphQLError {
     details = null,
     cause = null,
   }) {
-    logger.debug("data in error class", status, code, details);
+    // logger.debug("data in error class", status, code, details);
     super(message, {
       extensions: {
         status,
