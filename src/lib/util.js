@@ -14,7 +14,12 @@ export const asyncGraphqlAPIHandeler =
       return response
     } catch (error) {
       logger.debug(error, "error classs nhi")
+      logger.debug(error.cause, "errro .code")
+
+
+
       if (error instanceof AppError) {
+
         throw error;
       }
       if (error.name === "PrismaClientKnownRequestError") {
@@ -45,10 +50,15 @@ export const asyncGraphqlAPIHandeler =
       }
       if (error.name === "TokenExpiredError") {
 
+
+
         throw new AppError({
           message: error.message,
           status: 401,
           code: "TOKEN_EXPIRED",
+          cause: {
+            error: error.message
+          }
           // detail: error.issues[0],
         });
 
@@ -59,19 +69,26 @@ export const asyncGraphqlAPIHandeler =
         const retryAfter = Math.ceil(error.msBeforeNext / 1000 / 60);
         throw new AppError({
           message: `Too many requests. Try again after ${retryAfter} Minutes.`,
-          code: "RATE_LIMIT_ERROR",
+          code: error.code ?? "RATE_LIMIT_ERROR",
           status: 429,
+          cause: {
+            error: error.message
+          },
           detail: {
             retryAfter,
           },
         });
       }
       // throw error;
-      if (error.name === 'Error') {
+      if (error instanceof Error) {
+        // logger.debug(error.cause, "errro .code in instance")
         throw new AppError({
-          message: error.message,
+          message: "Something Went Wrong",
           code: "INTERNAL_SERVER_ERROR",
           status: 500,
+          cause: {
+            error: error.message
+          }
         });
       }
 

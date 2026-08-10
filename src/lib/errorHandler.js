@@ -16,6 +16,7 @@ export class AppError extends GraphQLError {
         code,
         details,
         stack: cause?.stack ?? null,
+        cause
       },
     });
   }
