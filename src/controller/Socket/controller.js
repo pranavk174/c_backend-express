@@ -500,7 +500,7 @@ WHERE id = ${message_id}    returning *
 );
 
 export const sendTypingEvent = asyncSocketAPIHandeler(
-  async (socket, payload, data, callback, typing = false) => {
+  async ({ socket, payload, data, callback, typing = false }) => {
     logger.debug(data, "new messageeeeee");
     const { reciever_ids, chat_id } = data;
 
