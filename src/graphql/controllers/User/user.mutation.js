@@ -520,7 +520,8 @@ export const generateRefreshTokenMutation = asyncGraphqlAPIHandeler(
       payload.device_id,
 
       {
-        ...payload,
+        name: payload.name,
+        profile_pic: payload.profile_pic,
       },
     );
 
