@@ -115,13 +115,14 @@ export const chatSockets = (socket) => {
 
   socket.on(START_TYPING, (data, callback) => {
     logger.debug("data recieved in typing", data);
-    sendTypingEvent(socket, payload, data, callback, true);
+    sendTypingEvent({ socket, payload, data, callback, typing: true });
   });
 
   socket.on(STOP_TYPING, (data, callback) => {
     logger.debug("data stopped in typing", data);
-    sendTypingEvent(socket, payload, data, callback, false);
+    sendTypingEvent({ socket, payload, data, callback, typing: false });
   });
+
 
   socket.on("disconnect", () => {
     onlineUsers.delete(payload.userId.toString());
