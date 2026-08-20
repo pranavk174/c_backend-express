@@ -516,7 +516,11 @@ export const sendTypingEvent = asyncSocketAPIHandeler(
 
     reciever_ids.forEach(async (reciever_id) => {
       const receiverInRoom = isReceiverInRoom(socket, reciever_id, chat_id);
-      logger.debug("Receiver room mein hai:", receiverInRoom);
+      logger.debug(
+        typing,
+        "Receiver room mein hai type send kro:",
+        receiverInRoom,
+      );
       // logger.debug(`chat:${chat_ids[0]}`, "chat id room id");
       if (receiverInRoom) {
         // Receiver room mein hai — room pe emit karo

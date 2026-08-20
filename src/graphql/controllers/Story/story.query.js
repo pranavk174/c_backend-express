@@ -187,14 +187,14 @@ WHERE
 
         (
             b.user_id = s.user_id
-            AND b.blocked_user_id = ${payload.userId}
+            AND b.blocked_user_id = ${payload.userId} AND b.blocked = true 
         )
 
         OR
 
         (
             b.user_id = ${payload.userId}
-            AND b.blocked_user_id = s.user_id
+            AND b.blocked_user_id = s.user_id AND b.blocked = true
         )
         AND s.created_at >= b.blocked_at
         AND (
@@ -261,7 +261,7 @@ ORDER BY
       return acc;
     }, {});
 
-    // logger.debug(JSON.stringify(Object.values(stories), null, 2));
+    // logger.debug(stories);
     return {
       message: "Stories retrieved successfully",
       status: 200,

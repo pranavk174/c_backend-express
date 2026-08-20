@@ -26,7 +26,7 @@ export const validateToken = async (context) => {
     throw new AppError({
       message: "No Access Token",
       status: 401,
-      code: "FORBIDDEN"
+      code: "FORBIDDEN",
     });
   const accessToken = cookie.value;
   payload = jwt.verify(accessToken, process.env.JWT_SECRET);
@@ -46,17 +46,16 @@ export const validateCookie = async (token) => {
       throw new AppError({
         message: err.message,
         status: 401,
-        code: "FORBIDDEN"
-      })
+        code: "FORBIDDEN",
+      });
 
-    throw err
+    throw err;
   }
 
   return payload;
 };
 
-export const generateTokens = (id, email, device_id, values = {},) => {
-
+export const generateTokens = (id, email, device_id, values = {}) => {
   const accessToken = jwt.sign(
     {
       userId: id,
@@ -70,7 +69,7 @@ export const generateTokens = (id, email, device_id, values = {},) => {
     },
   );
 
-  console.log(values, "values data in generate token")
+  console.log(values, "values data in generate token");
 
   const refreshToken = jwt.sign(
     {
@@ -86,5 +85,4 @@ export const generateTokens = (id, email, device_id, values = {},) => {
   );
 
   return { accessToken, refreshToken };
-
 };

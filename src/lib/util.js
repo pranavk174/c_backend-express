@@ -11,15 +11,12 @@ export const asyncGraphqlAPIHandeler =
     try {
       const response = await resolver(parent, input, context, info);
       // logger.info(response, "response in dataa")
-      return response
+      return response;
     } catch (error) {
-      logger.debug(error, "error classs nhi")
-      logger.debug(error.cause, "errro .code")
-
-
+      logger.debug(error, "error classs nhi");
+      logger.debug(error.cause, "errro .code");
 
       if (error instanceof AppError) {
-
         throw error;
       }
       if (error.name === "PrismaClientKnownRequestError") {
@@ -27,17 +24,25 @@ export const asyncGraphqlAPIHandeler =
           message: error.message,
           status: 500,
           code: isDev ? error.code : "DB_ERROR",
-          detail: error.issues[0],
+          // detail: error.issues[0],
         });
       }
       if (error.name === "ReferenceError") {
-
         const message = isDev ? error.message : "Something went Wrong";
         const code = isDev ? "INTERNAL_ERROR" : "VARIABLE_ERROR";
-        throw new AppError({ message, status: 500, code, details: error.stack });
+        throw new AppError({
+          message,
+          status: 500,
+          code,
+          details: error.stack,
+        });
       }
       if (error.name === "TypeError") {
-        throw new AppError({ message: error.message, status: 500, code: "USER_NOT_FOUND_ERROR" });
+        throw new AppError({
+          message: error.message,
+          status: 500,
+          code: "USER_NOT_FOUND_ERROR",
+        });
       }
       if (error.name === "ZodError") {
         logger.debug(error.issues[0].message, "error in zod ");
@@ -49,19 +54,15 @@ export const asyncGraphqlAPIHandeler =
         });
       }
       if (error.name === "TokenExpiredError") {
-
-
-
         throw new AppError({
           message: error.message,
           status: 401,
           code: "TOKEN_EXPIRED",
           cause: {
-            error: error.message
-          }
+            error: error.message,
+          },
           // detail: error.issues[0],
         });
-
       }
 
       if (error.consumedPoints >= 6) {
@@ -72,7 +73,7 @@ export const asyncGraphqlAPIHandeler =
           code: error.code ?? "RATE_LIMIT_ERROR",
           status: 429,
           cause: {
-            error: error.message
+            error: error.message,
           },
           detail: {
             retryAfter,
@@ -87,8 +88,8 @@ export const asyncGraphqlAPIHandeler =
           code: "INTERNAL_SERVER_ERROR",
           status: 500,
           cause: {
-            error: error.message
-          }
+            error: error.message,
+          },
         });
       }
 

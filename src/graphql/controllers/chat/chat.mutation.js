@@ -4,7 +4,11 @@ import { Prisma } from "@prisma/client";
 import { logger } from "../../../utils/logger.js";
 import { asyncGraphqlAPIHandeler } from "../../../lib/util.js";
 import { BadRequestError } from "../../../lib/errorHandler.js";
-import { checkChatExists, createChat } from "../../../lib/helpers.js";
+import {
+  checkChatExists,
+  checkMessageExists,
+  createChat,
+} from "../../../lib/helpers.js";
 
 export const createNewChatMutation = asyncGraphqlAPIHandeler(
   async (_, { member_id }, ctx) => {
@@ -245,15 +249,17 @@ export const deleteMessageMutation = asyncGraphqlAPIHandeler(
     logger.debug(messageData, "message dataaaa..._..");
 
     if (delete_type === "onlyme") {
-      const values = message_ids
-        .map((id) => `(${id}, ${payload.userId})`)
-        .join(",");
+      const values = message_ids.map(
+        (id) => Prisma.sql`(${id}, ${payload.userId})`,
+      );
 
-      await prisma.$executeRaw(`
-          INSERT INTO message_delete_for_me
-          (message_id, user_id)
-          VALUES ${values}
-        `);
+      await prisma.$queryRaw`
+  INSERT INTO message_delete_for_me
+    (message_id, user_id)
+  VALUES ${Prisma.join(values)}
+  ON CONFLICT (message_id, user_id)
+  DO NOTHING
+`;
     } else if (delete_type === "everyone") {
       messageData.map((m) => {
         if (m.sender_id != payload.userId) {

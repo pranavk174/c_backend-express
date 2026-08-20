@@ -500,7 +500,6 @@ export const generateRefreshTokenMutation = asyncGraphqlAPIHandeler(
 
     const refreshToken = cookie;
 
-
     const payload = jwt.verify(refreshToken, process.env.REFRESH_SECRET);
 
     const device = await prisma.devices.findFirst({
