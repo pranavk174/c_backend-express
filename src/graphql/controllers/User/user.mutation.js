@@ -151,11 +151,13 @@ export const verifyOtpMutation = asyncGraphqlAPIHandeler(
       // cleanup
       await prisma.otp.delete({ where: { email } });
 
+      const session_id = crypto.randomUUID();
       const { accessToken, refreshToken } = generateTokens(
         user.id,
         email,
         device_id,
         {
+          session_id,
           name: user.name,
           profile_pic: user.profile_pic,
         },
@@ -171,7 +173,8 @@ export const verifyOtpMutation = asyncGraphqlAPIHandeler(
     last_login,
     created_at,
     refresh_token,
-    expires_at
+    expires_at,
+    session_id
   )
   VALUES (
     ${user.id},
@@ -182,7 +185,8 @@ export const verifyOtpMutation = asyncGraphqlAPIHandeler(
     NOW(),
     NOW(),
     ${refreshToken},
-    NOW() + INTERVAL '7 days'
+    NOW() + INTERVAL '7 days',
+    ${session_id}::uuid
   )
   ON CONFLICT (user_id, device_id)
   DO UPDATE SET
@@ -190,7 +194,8 @@ export const verifyOtpMutation = asyncGraphqlAPIHandeler(
     location = EXCLUDED.location,
     refresh_token = EXCLUDED.refresh_token,
     last_login = NOW(),
-    expires_at = NOW() + INTERVAL '7 days'
+    expires_at = NOW() + INTERVAL '7 days',
+    session_id = EXCLUDED.session_id
   RETURNING *;
 `;
       const cookieOptions = {
@@ -519,6 +524,7 @@ export const generateRefreshTokenMutation = asyncGraphqlAPIHandeler(
       payload.device_id,
 
       {
+        session_id: payload.session_id,
         name: payload.name,
         profile_pic: payload.profile_pic,
       },
@@ -557,6 +563,7 @@ export const logoutMutation = asyncGraphqlAPIHandeler(
       data: {
         refresh_token: null,
         logged_out_at: new Date(),
+        session_id: null,
       },
     });
 

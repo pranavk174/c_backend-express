@@ -1,8 +1,6 @@
-/* eslint-disable no-undef */
 import jwt from "jsonwebtoken";
 import { GraphQLError } from "graphql";
-// import { logger } from "@/utils/logger.js";
-// import { logger } from "../utils/logger.js";
+import prisma from "../../prisma/prisma-client.js";
 import { AppError } from "./errorHandler.js";
 import { logger } from "../utils/logger.js";
 
@@ -30,17 +28,45 @@ export const validateToken = async (context) => {
     });
   const accessToken = cookie.value;
   payload = jwt.verify(accessToken, process.env.JWT_SECRET);
+
+  const exists =
+    await prisma.$queryRaw`SELECT session_id FROM devices WHERE user_id = ${payload.userId} AND device_id = ${payload.device_id} AND session_id = ${payload.session_id}`;
+
+  if (exists[0].session_id !== payload.session_id) {
+    throw new AppError({
+      message: "Invalid session Token is revoked Login Again",
+      status: 401,
+      code: "FORBIDDEN",
+    });
+  }
+
   return payload;
 };
 
 export const validateCookie = async (token) => {
   let payload;
   try {
-    const cookie = token;
+    let cookie = token;
+    if (typeof token !== "string") {
+      cookie = token.value;
+    }
+
     if (!cookie) throw new Error("No Access token");
 
-    const accessToken = token;
-    payload = jwt.verify(accessToken, process.env.JWT_SECRET);
+    // const accessToken = token;
+    // eslint-disable-next-line no-undef
+    payload = jwt.verify(cookie, process.env.JWT_SECRET);
+
+    const exists =
+      await prisma.$queryRaw`SELECT session_id FROM devices WHERE user_id = ${payload.userId} AND device_id = ${payload.device_id} AND session_id = ${payload.session_id}`;
+
+    if (exists[0].session_id !== payload.session_id) {
+      throw new AppError({
+        message: "Invalid session Token is revoked Login Again",
+        status: 401,
+        code: "FORBIDDEN",
+      });
+    }
   } catch (err) {
     if (err.name === "TokenExpiredError")
       throw new AppError({

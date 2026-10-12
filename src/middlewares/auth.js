@@ -36,7 +36,7 @@ export const socketAuthMiddleware = async (socket, next) => {
 
     // logger.debug(cookies, "cookies data in auth middleware");
     const token = cookies.accessToken;
-    // logger.debug(token, "token dataa..",cookies);
+    logger.debug(token, "token dataa..", cookies);
 
     const payload = await validateCookie(token);
 

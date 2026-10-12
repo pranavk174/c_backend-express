@@ -2,7 +2,11 @@ import { defaultFieldResolver, GraphQLError } from "graphql";
 import prisma from "../../../prisma/prisma-client.js";
 import { mapSchema, getDirective, MapperKind } from "@graphql-tools/utils";
 
-import { errorHandler, validateToken } from "../../lib/tokenvalidator.js";
+import {
+  errorHandler,
+  validateCookie,
+  validateToken,
+} from "../../lib/tokenvalidator.js";
 import { checkMemeberExists } from "../../lib/helpers.js";
 import { Prisma } from "@prisma/client";
 import { logger } from "../../utils/logger.js";
@@ -15,21 +19,20 @@ export function authDirectiveTransformer(schema) {
       if (authDirective) {
         const originalResolver = fieldConfig.resolve || defaultFieldResolver;
 
-        fieldConfig.resolve =
-          asyncGraphqlAPIHandeler(async function (source, args, context, info) {
-
+        fieldConfig.resolve = asyncGraphqlAPIHandeler(
+          async function (source, args, context, info) {
             // logger.debug("AUTH DIRECTIVE RUNNING");
-
+            const cookie = await context.request.cookieStore.get("accessToken");
             // TOKEN VALIDATION
-            const payload = await validateToken(context);
+            const payload = await validateCookie(cookie);
 
             // USER CONTEXT
             context.user = payload;
 
             // ORIGINAL RESOLVER
             return await originalResolver(source, args, context, info);
-
-          })
+          },
+        );
       }
 
       return fieldConfig;
