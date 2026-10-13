@@ -10,13 +10,18 @@ export class AppError extends GraphQLError {
     cause = null,
   }) {
     // logger.debug("data in error class", status, code, details);
+
+    logger.debug({
+      details,
+      stack: cause?.stack ?? null,
+      cause
+    })
+
     super(message, {
       extensions: {
         status,
         code,
-        details,
-        stack: cause?.stack ?? null,
-        cause
+       
       },
     });
   }

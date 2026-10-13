@@ -132,8 +132,25 @@ export const sendMessage = asyncSocketAPIHandeler(
         const notificationRecieverSocketId = notificationSocketIds.get(
           String(reciever_id),
         );
+        const existing = await prisma.block.findFirst({
+          where: {
+            unblocked_at: null,
+            OR: [
+              {
+                user_id: payload.userId,
+                blocked_user_id: reciever_id,
+              },
+              {
+                user_id: reciever_id,
+                blocked_user_id: payload.userId,
+              },
+            ],
+          },
+        });
 
-        const res = await prisma.$queryRaw`
+        logger.debug(existing, "existing block dataaa");
+        if (!existing.blocked) {
+          const res = await prisma.$queryRaw`
       
       insert into notification (reciever_id,sender_id ,notification_type,metadata) values(
         ${reciever_id},${payload.userId},'new_message',   ${JSON.stringify({
@@ -147,41 +164,42 @@ export const sendMessage = asyncSocketAPIHandeler(
       
       `;
 
-        const notification = {
-          notification_id: res[0].notification_id,
-          notification_type: res[0].notification_type,
-          name: payload.name,
-          message: res[0].metadata.message,
-          time: res[0].created_at,
-          avatar: payload.profile_pic,
-          color: "#25D366",
-        };
+          const notification = {
+            notification_id: res[0].notification_id,
+            notification_type: res[0].notification_type,
+            name: payload.name,
+            message: res[0].metadata.message,
+            time: res[0].created_at,
+            avatar: payload.profile_pic,
+            color: "#25D366",
+          };
 
-        // logger.debug(
-        //   notification,
-        //   "notification dataaa",
-        //   notificationRecieverSocketId,
-        // );
+          // logger.debug(
+          //   notification,
+          //   "notification dataaa",
+          //   notificationRecieverSocketId,
+          // );
 
-        notificationNamespace
-          .to(notificationRecieverSocketId)
-          .emit(NEW_NOTIFICATION, notification);
-        socket.to(receiverSocketId).emit(NEW_MESSAGE_ALERT, {
-          chat_id: addMessage[0].chat_id,
-          chat_type: "private",
-          user_id: payload.userId,
-          name: payload.name,
-          blocked: false,
-          cover_pic: payload.cover_pic,
-          profile_pic: payload.profile_pic,
-          bio: payload.bio,
-          email: payload.email,
-          mobile: payload.mobile,
-          last_message_id: addMessage[0].id,
-          unread_count: addMessage.length,
-          last_message: addMessage[0].content,
-          last_message_at: addMessage[0].created_at,
-        });
+          notificationNamespace
+            .to(notificationRecieverSocketId)
+            .emit(NEW_NOTIFICATION, notification);
+          socket.to(receiverSocketId).emit(NEW_MESSAGE_ALERT, {
+            chat_id: addMessage[0].chat_id,
+            chat_type: "private",
+            user_id: payload.userId,
+            name: payload.name,
+            blocked: false,
+            cover_pic: payload.cover_pic,
+            profile_pic: payload.profile_pic,
+            bio: payload.bio,
+            email: payload.email,
+            mobile: payload.mobile,
+            last_message_id: addMessage[0].id,
+            unread_count: addMessage.length,
+            last_message: addMessage[0].content,
+            last_message_at: addMessage[0].created_at,
+          });
+        }
       }
     });
 
