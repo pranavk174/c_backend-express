@@ -28,7 +28,7 @@ export const sendOtpMutation = asyncGraphqlAPIHandeler(async (_, { email }) => {
   inputValidate(email, "email");
   const limit = await ApiLimiter.consume(email);
 
-  logger.debug(limit, "limit dataaaaa");
+  // logger.debug(limit, "limit dataaaaa");
   const exists = await prisma.users.findFirst({
     where: { email },
   });

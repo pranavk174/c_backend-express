@@ -73,10 +73,10 @@ export const chatSockets = (socket) => {
     seenMessage(socket, payload, data, callback);
   });
 
-  socket.on(CHAT_LEAVED, (data, callback) => {
+  socket.on(CHAT_LEAVED, async(data, callback) => {
     // logger.debug("chat ;eaft. user .....", data);
 
-    leaveChat(socket, data, callback);
+    await leaveChat(socket, data, callback);
 
     logger.debug(" socket leavedddddddd");
   });

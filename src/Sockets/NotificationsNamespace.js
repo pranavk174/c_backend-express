@@ -18,7 +18,7 @@ export const NotificationSocket = (socket) => {
 
   sendUsers(io, payload);
 
-  logger.debug(chatSocketIds, "use socet idssss i notification name sapce");
+  // logger.debug(chatSocketIds, "use socet idssss i notification name sapce");
   // User ka socketId map mein store karo
   // Example event
 

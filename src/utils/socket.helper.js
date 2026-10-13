@@ -7,6 +7,7 @@ import { Prisma } from "@prisma/client";
 import { ONLINE_USERS, SEEN_NOTIFICATION } from "./events.js";
 
 import { logger } from "./logger.js";
+import { chatNamespace } from "../index.js";
 
 export const checkBlocked = async (user_id, otherUserId) => {
   try {
@@ -134,9 +135,23 @@ AND ns.notification_id IS NULL;
   });
 };
 
-export const leaveChat = (socket, data, callback) => {
-  const { chat_id, user_id } = data;
+export const leaveChat = async(socket, data, callback) => {
+  const { chat_id, user_id ,chatType } = data;
   // logger.debug("chat ;eaft. user .....", data);
+
+  const reciever = chatSocketIds.get(String(user_id))
+
+  const isInRoom = isReceiverInRoom(chatNamespace , user_id , chat_id)
+
+
+  if(isInRoom ){
+    const targetSocket = chatNamespace.sockets.get(reciever);
+
+    if (targetSocket) {
+      await targetSocket.leave(`chat:${chat_id}`);
+    }
+  }
+
 
   // onlineUsers.delete(user_id.toString());
   const users = socket.leave(`chat:${chat_id}`);

@@ -95,7 +95,7 @@ export const generateTokens = (id, email, device_id, values = {}) => {
     },
   );
 
-  console.log(values, "values data in generate token");
+  // logger.log(values, "values data in generate token");
 
   const refreshToken = jwt.sign(
     {
