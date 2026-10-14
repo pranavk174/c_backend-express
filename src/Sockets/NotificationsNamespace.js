@@ -5,6 +5,7 @@ import { SEEN_NOTIFICATION } from "../utils/events.js";
 import { logger } from "../utils/logger.js";
 import {
   chatSocketIds,
+  notificationSocketIds,
   onlineUsers,
   sendUsers,
   storySocketIds,
@@ -13,12 +14,15 @@ import {
 export const NotificationSocket = (socket) => {
   // logger.debug("User connected:", socket.user, socket.id);
   const payload = socket.user;
-  storySocketIds.set(payload.userId.toString(), socket.id);
+  notificationSocketIds.set(payload.userId.toString(), socket.id);
   onlineUsers.add(payload.userId.toString());
 
   sendUsers(io, payload);
 
-  // logger.debug(chatSocketIds, "use socet idssss i notification name sapce");
+  logger.debug(
+    notificationSocketIds,
+    "use socet idssss i notification name sapce",
+  );
   // User ka socketId map mein store karo
   // Example event
 

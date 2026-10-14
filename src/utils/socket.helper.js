@@ -135,23 +135,21 @@ AND ns.notification_id IS NULL;
   });
 };
 
-export const leaveChat = async(socket, data, callback) => {
-  const { chat_id, user_id ,chatType } = data;
+export const leaveChat = async (socket, data, callback) => {
+  const { chat_id, user_id, chatType } = data;
   // logger.debug("chat ;eaft. user .....", data);
 
-  const reciever = chatSocketIds.get(String(user_id))
+  const reciever = chatSocketIds.get(String(user_id));
 
-  const isInRoom = isReceiverInRoom(chatNamespace , user_id , chat_id)
+  const isInRoom = isReceiverInRoom(chatNamespace, user_id, chat_id);
 
-
-  if(isInRoom ){
+  if (isInRoom) {
     const targetSocket = chatNamespace.sockets.get(reciever);
 
     if (targetSocket) {
       await targetSocket.leave(`chat:${chat_id}`);
     }
   }
-
 
   // onlineUsers.delete(user_id.toString());
   const users = socket.leave(`chat:${chat_id}`);
@@ -166,6 +164,11 @@ export const leaveChat = async(socket, data, callback) => {
 
 export const getSockets = (member) => {
   const receiverSocketId = chatSocketIds.get(String(member));
+  return receiverSocketId;
+};
+
+export const getNotificationSockets = (member) => {
+  const receiverSocketId = notificationSocketIds.get(String(member));
   return receiverSocketId;
 };
 
@@ -257,8 +260,8 @@ export const createNotification = async (
 
       insert into notification (reciever_id,sender_id ,notification_type,metadata,reference_id) values(
         ${reciever_id},${payload.userId},${type},   ${JSON.stringify({
-      message: `${message}`,
-    })}::jsonb , ${reference_id}
+          message: `${message}`,
+        })}::jsonb , ${reference_id}
 
       
       

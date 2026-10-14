@@ -46,7 +46,7 @@ export const chatSockets = (socket) => {
 
   sendUsers(socket, payload);
 
-  logger.debug(chatSocketIds, "use socet idssss i chatName space");
+  // logger.debug(chatSocketIds, "use socet idssss i chatName space");
   // User ka socketId map mein store karo
   // Example event
   socket.on("message", (data) => {
@@ -73,7 +73,7 @@ export const chatSockets = (socket) => {
     seenMessage(socket, payload, data, callback);
   });
 
-  socket.on(CHAT_LEAVED, async(data, callback) => {
+  socket.on(CHAT_LEAVED, async (data, callback) => {
     // logger.debug("chat ;eaft. user .....", data);
 
     await leaveChat(socket, data, callback);
@@ -122,7 +122,6 @@ export const chatSockets = (socket) => {
     logger.debug("data stopped in typing", data);
     sendTypingEvent({ socket, payload, data, callback, typing: false });
   });
-
 
   socket.on("disconnect", () => {
     onlineUsers.delete(payload.userId.toString());

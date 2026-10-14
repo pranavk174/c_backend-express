@@ -30,7 +30,7 @@ export const sendMessage = asyncSocketAPIHandeler(
   async (socket, payload, data, callback) => {
     logger.debug(data, "new messageeeeee");
 
-    const { content, media, chat_ids, reciever_ids } = data;
+    const { content, media, chat_ids, reciever_ids, chat_type } = data;
     if (
       (!content && !media) ||
       (chat_ids &&
@@ -38,7 +38,7 @@ export const sendMessage = asyncSocketAPIHandeler(
         reciever_ids &&
         reciever_ids.length < 1)
     ) {
-      throw new Error("data is available bro");
+      throw new Error("data is not available bro");
       // return callback({
       //   message: "Data is missing...",
       //   status: 400,
@@ -56,44 +56,47 @@ export const sendMessage = asyncSocketAPIHandeler(
     }
     logger.debug(reciever_ids, "type dataaa...", chat_ids);
 
-    if (!chat_id) {
-      const reciever_id = parseInt(reciever_ids[0]);
-      const reciever = await chekUserExists(prisma, reciever_ids);
+    if (chat_type === "private") {
+      if (!chat_id) {
+        const reciever_id = parseInt(reciever_ids[0]);
+        const reciever = await chekUserExists(prisma, reciever_ids);
 
-      if (!reciever.length > 0) {
-        return {
-          message: "Reciever Does not exists",
-          status: 404,
-          success: false,
-        };
-      }
-      // const memeberExists = await checkMemeberExists(prisma, reciever_ids);
+        if (!reciever.length > 0) {
+          return {
+            message: "Reciever Does not exists",
+            status: 404,
+            success: false,
+          };
+        }
+        // const memeberExists = await checkMemeberExists(prisma, reciever_ids);
 
-      const chatExists = await checkChatExists(
-        prisma,
-        payload.userId,
-        reciever_ids,
-      );
+        const chatExists = await checkChatExists(
+          prisma,
+          payload.userId,
+          reciever_ids,
+        );
 
-      if (chatExists.length < 1) {
-        const data = await prisma.$queryRaw`
+        if (chatExists.length < 1) {
+          const data = await prisma.$queryRaw`
         
         insert into chat (chat_type) values('private')  RETURNING id;
 
 
         `;
 
-        chatId = data[0].id;
+          chatId = data[0].id;
 
-        await prisma.$queryRaw`
+          await prisma.$queryRaw`
         
         insert into chat_member (member_id ,chat_id ) values(${payload.userId},${chatId}),(${reciever_id},${chatId})
         
         `;
-      } else {
-        chatId = chatExists[0].chat_id;
+        } else {
+          chatId = chatExists[0].chat_id;
+        }
       }
     }
+
     let addMessage = await prisma.$queryRaw`
         
         insert into message (content,sender_id ,created_at ,chat_id )  values(${content},${payload.userId},${new Date()},${chat_id ?? chatId}) returning *
@@ -149,7 +152,7 @@ export const sendMessage = asyncSocketAPIHandeler(
         });
 
         logger.debug(existing, "existing block dataaa");
-        if (!existing.blocked) {
+        if (!existing || !existing.blocked) {
           const res = await prisma.$queryRaw`
       
       insert into notification (reciever_id,sender_id ,notification_type,metadata) values(

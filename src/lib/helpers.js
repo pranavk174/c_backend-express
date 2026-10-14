@@ -17,6 +17,8 @@ export const checkMessageExists = async (prisma, message_ids) => {
 
   `;
 
+  logger.log(message_ids, "data length and messaged idssss", data);
+
   if (data.length !== message_ids.length) {
     throw new BadRequestError("Some messages do not exist or are deleted");
   }
