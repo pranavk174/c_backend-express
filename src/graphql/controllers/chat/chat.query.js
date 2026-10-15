@@ -217,8 +217,8 @@ SELECT DISTINCT ON (c.id)
 
         ELSE false::boolean
     END as blocked,
-
-    u.cover_pic,
+  
+   
     CASE 
         WHEN active_block.blocked_user_id = ${payload.userId}
         THEN 'https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png'

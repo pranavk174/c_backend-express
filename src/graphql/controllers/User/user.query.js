@@ -9,6 +9,16 @@ export const getUserQuery = asyncGraphqlAPIHandeler(async (_, __, context) => {
     },
   });
 
+  const user = data
+    ? {
+        ...data,
+        profile_pic:
+          data.profile_pic === null
+            ? "https://res.cloudinary.com/dwbxff6lk/image/upload/v1773998298/samples/people/kitchen-bar.jpg"
+            : data.profile_pic,
+      }
+    : null;
+
   if (!data) {
     // logger.debug("error in data getting");
     throw new AppError({
@@ -25,7 +35,7 @@ export const getUserQuery = asyncGraphqlAPIHandeler(async (_, __, context) => {
     status: 200,
     data: {
       _responseType: "User",
-      ...data,
+      ...user,
     },
     success: true,
   };
@@ -37,6 +47,16 @@ export const getAllusersQuery = asyncGraphqlAPIHandeler(async (_, __, ctx) => {
   const users = await prisma.$queryRaw`
         SELECT
         u.*,
+        CASE  
+          WHEN u.profile_pic IS NULL  THEN
+          'https://res.cloudinary.com/dwbxff6lk/image/upload/v1773998298/samples/people/kitchen-bar.jpg'
+          else u.profile_pic
+        END AS profile_pic,
+        CASE  
+          WHEN u.cover_pic IS NULL THEN
+          'https://res.cloudinary.com/dwbxff6lk/image/upload/v1773998299/samples/landscapes/girl-urban-view.jpg'
+          else u.cover_pic
+        END AS cover_pic,
         MAX(cm.chat_id) AS chat_id
     FROM users u
    LEFT JOIN chat_member cm
